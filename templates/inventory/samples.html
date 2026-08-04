@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% block title %}Sample Items{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Sample Items</h1>
+        <p class="page-subtitle">Product samples for display and demonstration</p>
+    </div>
+    <button class="btn btn-primary" onclick="openModal('addModal')">
+        <i class="bi bi-plus-lg"></i> Add Sample Item
+    </button>
+</div>
+
+<div class="table-wrap">
+    <div class="table-toolbar">
+        <div class="table-search">
+            <input type="text" placeholder="Search samples..." oninput="filterTable(this.value)">
+        </div>
+    </div>
+    <table id="masterTable">
+        <thead>
+            <tr>
+                <th>ITEM ID</th>
+                <th>NAME</th>
+                <th>MODEL</th>
+                <th>QUANTITY</th>
+                <th>CONDITION</th>
+                <th>LOCATION</th>
+                <th>STATUS</th>
+                <th>ACTIONS</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="item-id">{{ item.item_code }}</td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.model or '-' }}</td>
+                <td>{{ item.quantity }} {{ item.unit.name if item.unit else 'pcs' }}</td>
+                <td>{{ item.condition.name if item.condition else '-' }}</td>
+                <td>{{ item.location.name if item.location else '-' }}</td>
+                <td>
+                    {% if item.status == 'available' %}
+                    <span class="badge badge-available">Available</span>
+                    {% elif item.status == 'in_use' %}
+                    <span class="badge badge-in-use">In Use</span>
+                    {% else %}
+                    <span class="badge badge-damaged">{{ item.status }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="action-btns">
+                        <button class="action-btn view" title="View" onclick="viewItem({{ item.id }})">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="action-btn edit" title="Edit" onclick="editItem({{ item.id }})">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <form method="POST" action="{{ url_for('inventory.delete_item', id=item.id) }}"
+                            onsubmit="return confirm('Delete this item?')" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="action-btn delete" title="Delete">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📦</div>
+                        <p>No sample items yet.</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Add Modal -->
+<div class="modal-overlay" id="addModal">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <div class="modal-title">Add Sample Item</div>
+            <button class="modal-close" onclick="closeModal('addModal')">✕</button>
+        </div>
+        <form method="POST" action="{{ url_for('inventory.add_item') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="item_type" value="sample">
+            <input type="hidden" name="redirect_to" value="inventory.samples">
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Item Name *</label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. Product Sample Box A"
+                            required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Model</label>
+                        <input type="text" name="model" class="form-control" placeholder="e.g. Sample-A">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" name="quantity" class="form-control" value="1" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Unit</label>
+                        <select name="unit_id" class="form-control">
+                            <option value="">-- Select Unit --</option>
+                            {% for unit in units %}
+                            <option value="{{ unit.id }}">{{ unit.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Condition</label>
+                        <select name="condition_id" class="form-control">
+                            <option value="">-- Select Condition --</option>
+                            {% for cond in conditions %}
+                            <option value="{{ cond.id }}">{{ cond.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Location</label>
+                        <select name="location_id" class="form-control">
+                            <option value="">-- Select Location --</option>
+                            {% for loc in locations %}
+                            <option value="{{ loc.id }}">{{ loc.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-control">
+                        <option value="available">Available</option>
+                        <option value="in_use">In Use</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <input type="text" name="notes" class="form-control" placeholder="Additional notes...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('addModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Sample</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <div class="modal-title">Edit Sample Item</div>
+            <button class="modal-close" onclick="closeModal('editModal')">✕</button>
+        </div>
+        <form method="POST" id="editForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="item_type" value="sample">
+            <input type="hidden" name="redirect_to" value="inventory.samples">
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Item Name *</label>
+                        <input type="text" name="name" id="sName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Model</label>
+                        <input type="text" name="model" id="sModel" class="form-control">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" name="quantity" id="sQty" class="form-control" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Unit</label>
+                        <select name="unit_id" id="sUnit" class="form-control">
+                            <option value="">-- Select Unit --</option>
+                            {% for unit in units %}
+                            <option value="{{ unit.id }}">{{ unit.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Condition</label>
+                        <select name="condition_id" id="sCondition" class="form-control">
+                            <option value="">-- Select Condition --</option>
+                            {% for cond in conditions %}
+                            <option value="{{ cond.id }}">{{ cond.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Location</label>
+                        <select name="location_id" id="sLocation" class="form-control">
+                            <option value="">-- Select Location --</option>
+                            {% for loc in locations %}
+                            <option value="{{ loc.id }}">{{ loc.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select name="status" id="sStatus" class="form-control">
+                        <option value="available">Available</option>
+                        <option value="in_use">In Use</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <input type="text" name="notes" id="sNotes" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('editModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function filterTable(q) {
+        q = q.toLowerCase();
+        document.querySelectorAll('#masterTable tbody tr').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    }
+
+    async function editItem(id) {
+        const res = await fetch(`/inventory/${id}/json`);
+        const data = await res.json();
+        document.getElementById('editForm').action = `/inventory/${id}/edit`;
+        document.getElementById('sName').value = data.name;
+        document.getElementById('sModel').value = data.model;
+        document.getElementById('sQty').value = data.quantity;
+        document.getElementById('sUnit').value = data.unit_id || '';
+        document.getElementById('sCondition').value = data.condition_id || '';
+        document.getElementById('sLocation').value = data.location_id || '';
+        document.getElementById('sStatus').value = data.status;
+        document.getElementById('sNotes').value = data.notes;
+        openModal('editModal');
+    }
+
+    function viewItem(id) {
+        window.location.href = `/inventory/${id}/json`;
+    }
+</script>
+{% endblock %}

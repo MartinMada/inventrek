@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Holders / PIC{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Holders / PIC</h1>
+        <p class="page-subtitle">Manage item holders and person in charge</p>
+    </div>
+    <button class="btn btn-primary" onclick="openModal('addModal')">
+        <i class="bi bi-plus-lg"></i> Add Holder
+    </button>
+</div>
+
+<div class="table-wrap">
+    <div class="table-toolbar">
+        <div class="table-search">
+            <input type="text" placeholder="Search holders..." oninput="filterTable(this.value)">
+        </div>
+    </div>
+    <table id="masterTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>NAME</th>
+                <th>DIVISION</th>
+                <th>EMAIL</th>
+                <th>STATUS</th>
+                <th>ACTIONS</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.division or '-' }}</td>
+                <td>{{ item.email or '-' }}</td>
+                <td>
+                    <span class="badge badge-{{ 'active' if item.status == 'active' else 'inactive' }}">
+                        {{ item.status }}
+                    </span>
+                </td>
+                <td>
+                    <div class="action-btns">
+                        <button class="action-btn edit"
+                            onclick="openEdit({{ item.id }}, '{{ item.name }}', '{{ item.division or '' }}', '{{ item.email or '' }}')"
+                            title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <form method="POST" action="{{ url_for('master.delete_holder', id=item.id) }}"
+                            onsubmit="return confirm('Delete this holder?')" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="action-btn delete" title="Delete">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👤</div>
+                        <p>No holders yet.</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Add Modal -->
+<div class="modal-overlay" id="addModal">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title">Add Holder</div>
+            <button class="modal-close" onclick="closeModal('addModal')">✕</button>
+        </div>
+        <form method="POST" action="{{ url_for('master.add_holder') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Full Name *</label>
+                    <input type="text" name="name" class="form-control" placeholder="e.g. John Doe" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Division</label>
+                    <input type="text" name="division" class="form-control" placeholder="e.g. IT Department">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" placeholder="e.g. john@company.com">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('addModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Holder</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title">Edit Holder</div>
+            <button class="modal-close" onclick="closeModal('editModal')">✕</button>
+        </div>
+        <form method="POST" id="editForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Full Name *</label>
+                    <input type="text" name="name" id="editName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Division</label>
+                    <input type="text" name="division" id="editDivision" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" id="editEmail" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('editModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+    function openEdit(id, name, division, email) {
+        document.getElementById('editForm').action = `/master/holders/${id}/edit`;
+        document.getElementById('editName').value = name;
+        document.getElementById('editDivision').value = division;
+        document.getElementById('editEmail').value = email;
+        openModal('editModal');
+    }
+    function filterTable(q) {
+        q = q.toLowerCase();
+        document.querySelectorAll('#masterTable tbody tr').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    }
+</script>
+{% endblock %}

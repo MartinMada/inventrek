@@ -1,0 +1,31 @@
+{% macro master_table(title, subtitle, add_url, columns, rows, modal_id) %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ title }}</h1>
+        <p class="page-subtitle">{{ subtitle }}</p>
+    </div>
+    <button class="btn btn-primary" onclick="openModal('{{ modal_id }}')">
+        <i class="bi bi-plus-lg"></i> Add {{ title[:-1] if title.endswith('s') else title }}
+    </button>
+</div>
+
+<div class="table-wrap">
+    <div class="table-toolbar">
+        <div class="table-search">
+            <input type="text" placeholder="Search {{ title | lower }}..." oninput="filterTable(this.value)">
+        </div>
+    </div>
+    <table id="masterTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                {{ columns }}
+                <th>ACTIONS</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ rows }}
+        </tbody>
+    </table>
+</div>
+{% endmacro %}

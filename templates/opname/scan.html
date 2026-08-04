@@ -1,0 +1,666 @@
+{% extends "base.html" %}
+{% block title %}Scan QR Code{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Scan QR Code</h1>
+        <p class="page-subtitle">Scan item QR code for stock checking</p>
+    </div>
+</div>
+
+<div class="scan-layout">
+
+    <!-- ── LEFT: Scanner Panel ── -->
+    <div class="card">
+        <div class="card-header">QR Code Scanner</div>
+        <div class="card-body">
+
+            <!-- Input manual -->
+            <div style="display:flex;gap:10px;margin-bottom:16px">
+                <input type="text" id="qrInput"
+                       class="form-control"
+                       placeholder="Enter or scan QR code..."
+                       autocomplete="off"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();lookupItem()}">
+                <button class="btn btn-primary" onclick="lookupItem()"
+                        style="flex-shrink:0;white-space:nowrap">
+                    <i class="bi bi-search"></i> Scan
+                </button>
+            </div>
+
+            <!-- Camera area -->
+            <div id="cameraArea"
+                 style="border:2px dashed var(--border);border-radius:var(--radius);
+                        background:var(--bg);position:relative;overflow:hidden;
+                        min-height:200px;display:flex;flex-direction:column;
+                        align-items:center;justify-content:center;">
+
+                <!-- Idle state -->
+                <div id="cameraIdle" style="text-align:center;padding:24px">
+                    <i class="bi bi-camera"
+                       style="font-size:2.5rem;color:var(--muted);display:block;
+                              margin-bottom:10px"></i>
+                    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">
+                        Use camera to scan QR code
+                    </p>
+                    <button class="btn btn-outline" onclick="startCamera()">
+                        <i class="bi bi-camera-video"></i> Start Camera
+                    </button>
+                </div>
+
+                <!-- Loading state -->
+                <div id="cameraLoading"
+                     style="display:none;text-align:center;padding:24px">
+                    <div class="spinner" style="margin:0 auto 12px"></div>
+                    <p style="font-size:13px;color:var(--muted)">
+                        Accessing camera...
+                    </p>
+                </div>
+
+                <!-- Active state -->
+                <div id="cameraActive" style="display:none;width:100%">
+                    <video id="videoEl"
+                           style="width:100%;display:block;
+                                  border-radius:4px;max-height:280px;
+                                  object-fit:cover"
+                           playsinline autoplay muted></video>
+                    <canvas id="canvasEl" style="display:none"></canvas>
+
+                    <!-- Scan overlay -->
+                    <div style="position:absolute;inset:0;pointer-events:none;
+                                display:flex;align-items:center;justify-content:center">
+                        <div class="scan-frame">
+                            <div class="corner tl"></div>
+                            <div class="corner tr"></div>
+                            <div class="corner bl"></div>
+                            <div class="corner br"></div>
+                            <div id="scanLine" class="scan-line"></div>
+                        </div>
+                    </div>
+
+                    <!-- Controls overlay -->
+                    <div style="position:absolute;bottom:10px;
+                                left:10px;right:10px;
+                                display:flex;justify-content:space-between;
+                                align-items:center">
+                        <div id="scanStatus"
+                             style="font-size:11px;color:white;font-weight:600;
+                                    background:rgba(0,0,0,0.55);padding:3px 8px;
+                                    border-radius:4px">
+                            Scanning...
+                        </div>
+                        <button class="btn btn-outline" onclick="stopCamera()"
+                                style="font-size:12px;padding:4px 12px;
+                                       background:rgba(255,255,255,0.92);
+                                       border-color:#e5e7eb">
+                            <i class="bi bi-stop-circle"></i> Stop
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Camera error -->
+            <div id="cameraError"
+                 style="display:none;margin-top:10px;padding:10px 14px;
+                        background:#fef2f2;border:1px solid #fecaca;
+                        border-radius:var(--radius-sm);
+                        font-size:13px;color:#dc2626">
+            </div>
+
+            <!-- Browser support warning -->
+            <div id="barcodeWarning"
+                 style="display:none;margin-top:10px;padding:10px 14px;
+                        background:#fffbeb;border:1px solid #fde68a;
+                        border-radius:var(--radius-sm);
+                        font-size:12px;color:#92400e">
+                <i class="bi bi-info-circle"></i>
+                Auto-scan not supported in this browser.
+                Use manual input or try Chrome/Edge.
+            </div>
+
+            <!-- Tips -->
+            <div style="margin-top:12px;padding:10px 14px;background:var(--bg);
+                        border-radius:var(--radius-sm)">
+                <p style="font-size:12px;color:var(--muted);margin:0 0 4px;
+                           font-weight:600">
+                    <i class="bi bi-lightbulb"></i> Tips:
+                </p>
+                <ul style="font-size:12px;color:var(--muted);
+                           margin:0;padding-left:16px;line-height:1.8">
+                    <li>Type item code manually and press <strong>Enter</strong></li>
+                    <li>Use Chrome or Edge for camera scan</li>
+                    <li>On mobile, use the back camera for best results</li>
+                    <li>Make sure no other app is using the camera</li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── RIGHT: Item Details Panel ── -->
+    <div class="card">
+        <div class="card-header">Item Details</div>
+        <div class="card-body">
+
+            <!-- Empty state -->
+            <div id="detailEmpty" style="text-align:center;padding:40px 20px">
+                <i class="bi bi-qr-code-scan"
+                   style="font-size:3rem;color:var(--muted);display:block;
+                          margin-bottom:12px"></i>
+                <p style="font-size:13px;color:var(--muted)">
+                    Scan a QR code to view item details
+                </p>
+            </div>
+
+            <!-- Loading state -->
+            <div id="detailLoading"
+                 style="display:none;text-align:center;padding:40px 20px">
+                <div class="spinner" style="margin:0 auto 12px"></div>
+                <p style="font-size:13px;color:var(--muted)">
+                    Looking up item...
+                </p>
+            </div>
+
+            <!-- Error state -->
+            <div id="detailError"
+                 style="display:none;text-align:center;padding:40px 20px">
+                <i class="bi bi-exclamation-triangle"
+                   style="font-size:2.5rem;color:#f59e0b;
+                          display:block;margin-bottom:12px"></i>
+                <p id="detailErrorMsg"
+                   style="font-size:13px;color:var(--muted);margin-bottom:16px">
+                    Item not found
+                </p>
+                <button class="btn btn-outline" onclick="resetPanel()"
+                        style="font-size:13px">
+                    <i class="bi bi-arrow-counterclockwise"></i> Try Again
+                </button>
+            </div>
+
+            <!-- Found state -->
+            <div id="detailFound" style="display:none">
+
+                <!-- Header: code + status -->
+                <div style="display:flex;align-items:center;
+                            justify-content:space-between;
+                            margin-bottom:12px;flex-wrap:wrap;gap:6px">
+                    <span id="detailItemCode"
+                          style="font-size:12px;font-weight:700;
+                                 color:var(--muted);letter-spacing:0.05em;
+                                 font-family:monospace"></span>
+                    <span id="detailStatusBadge" class="badge"></span>
+                </div>
+
+                <!-- Name -->
+                <h3 id="detailName"
+                    style="font-size:15px;font-weight:800;
+                           color:var(--text);margin-bottom:14px;
+                           line-height:1.3"></h3>
+
+                <!-- Info grid -->
+                <div class="detail-grid">
+                    <div class="detail-cell">
+                        <div class="detail-label">Category</div>
+                        <div id="detailCategory" class="detail-value"></div>
+                    </div>
+                    <div class="detail-cell">
+                        <div class="detail-label">Brand</div>
+                        <div id="detailBrand" class="detail-value"></div>
+                    </div>
+                    <div class="detail-cell">
+                        <div class="detail-label">Condition</div>
+                        <div id="detailCondition" class="detail-value"></div>
+                    </div>
+                    <div class="detail-cell">
+                        <div class="detail-label">Quantity</div>
+                        <div id="detailQuantity" class="detail-value"></div>
+                    </div>
+                    <div class="detail-cell">
+                        <div class="detail-label">Location</div>
+                        <div id="detailLocation" class="detail-value"></div>
+                    </div>
+                    <div class="detail-cell">
+                        <div class="detail-label">Holder</div>
+                        <div id="detailHolder" class="detail-value"></div>
+                    </div>
+                </div>
+
+                <hr style="border:none;border-top:1px solid var(--border);
+                           margin:16px 0">
+
+                <!-- Opname form -->
+                <form method="POST"
+                      action="{{ url_for('opname.submit_opname') }}"
+                      id="opnameForm">
+                    <input type="hidden" name="csrf_token"
+                           value="{{ csrf_token() }}">
+                    <input type="hidden" name="item_id" id="formItemId">
+
+                    <div style="font-size:12px;font-weight:700;color:var(--text);
+                                text-transform:uppercase;letter-spacing:0.06em;
+                                margin-bottom:10px">
+                        Update Opname
+                    </div>
+
+                    <div class="form-row" style="margin-bottom:10px">
+                        <div class="form-group">
+                            <label class="form-label">Condition</label>
+                            <select name="condition_id" class="form-control">
+                                <option value="">-- No Change --</option>
+                                {% for cond in conditions %}
+                                <option value="{{ cond.id }}">
+                                    {{ cond.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Location</label>
+                            <select name="location_id" class="form-control">
+                                <option value="">-- No Change --</option>
+                                {% for loc in locations %}
+                                <option value="{{ loc.id }}">
+                                    {{ loc.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:14px">
+                        <label class="form-label">Notes</label>
+                        <input type="text" name="notes"
+                               class="form-control"
+                               placeholder="Optional notes...">
+                    </div>
+
+                    <div style="display:flex;gap:10px">
+                        <button type="submit" class="btn btn-primary"
+                                style="flex:1">
+                            <i class="bi bi-clipboard-check"></i>
+                            Record Opname
+                        </button>
+                        <button type="button" class="btn btn-outline"
+                                onclick="resetPanel()"
+                                title="Scan another item">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Flash messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div style="margin-top:20px">
+    {% for category, message in messages %}
+    <div style="padding:12px 16px;border-radius:var(--radius-sm);
+                margin-bottom:8px;font-size:13px;
+                background:{{ '#f0fdf4' if category=='success' else '#fef2f2' }};
+                border:1px solid {{ '#86efac' if category=='success' else '#fecaca' }};
+                color:{{ '#16a34a' if category=='success' else '#dc2626' }}">
+        <i class="bi bi-{{ 'check-circle' if category=='success'
+                            else 'exclamation-circle' }}"></i>
+        {{ message }}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+{% endblock %}
+
+
+{% block scripts %}
+<style>
+/* ── Layout responsive ───────────────────────────────────── */
+.scan-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+@media (max-width: 768px) {
+    .scan-layout {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+}
+
+/* ── Detail info grid ────────────────────────────────────── */
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+@media (max-width: 480px) {
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.detail-cell {
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+}
+
+.detail-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 3px;
+}
+
+.detail-value {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    word-break: break-word;
+}
+
+/* ── Scan frame overlay ──────────────────────────────────── */
+.scan-frame {
+    width: 180px;
+    height: 180px;
+    position: relative;
+}
+
+.corner {
+    position: absolute;
+    width: 26px;
+    height: 26px;
+}
+
+.corner.tl {
+    top: 0; left: 0;
+    border-top: 3px solid #3b82f6;
+    border-left: 3px solid #3b82f6;
+    border-radius: 2px 0 0 0;
+}
+
+.corner.tr {
+    top: 0; right: 0;
+    border-top: 3px solid #3b82f6;
+    border-right: 3px solid #3b82f6;
+    border-radius: 0 2px 0 0;
+}
+
+.corner.bl {
+    bottom: 0; left: 0;
+    border-bottom: 3px solid #3b82f6;
+    border-left: 3px solid #3b82f6;
+    border-radius: 0 0 0 2px;
+}
+
+.corner.br {
+    bottom: 0; right: 0;
+    border-bottom: 3px solid #3b82f6;
+    border-right: 3px solid #3b82f6;
+    border-radius: 0 0 2px 0;
+}
+
+.scan-line {
+    position: absolute;
+    left: 4px; right: 4px;
+    height: 2px;
+    background: linear-gradient(
+        90deg, transparent, #3b82f6, transparent
+    );
+    animation: scanMove 2s linear infinite;
+}
+
+/* ── Spinner ─────────────────────────────────────────────── */
+.spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+/* ── Animations ──────────────────────────────────────────── */
+@keyframes scanMove {
+    0%   { top: 4px; }
+    50%  { top: calc(100% - 6px); }
+    100% { top: 4px; }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+// ── State ─────────────────────────────────────────────────────
+let videoStream     = null;
+let scanInterval    = null;
+let lastScannedCode = '';
+let isLookingUp     = false;
+
+// ── Check BarcodeDetector support ────────────────────────────
+if (!('BarcodeDetector' in window)) {
+    document.getElementById('barcodeWarning').style.display = 'block';
+}
+
+// ── Camera: Start ─────────────────────────────────────────────
+async function startCamera() {
+    showCameraState('loading');
+    document.getElementById('cameraError').style.display = 'none';
+
+    try {
+        // Coba kamera belakang dulu (untuk HP), fallback ke kamera manapun
+        let stream;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: { ideal: 'environment' },
+                    width:  { ideal: 1280 },
+                    height: { ideal: 720 },
+                }
+            });
+        } catch {
+            // Fallback: kamera apapun yang tersedia
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: true
+            });
+        }
+
+        videoStream = stream;
+        const video = document.getElementById('videoEl');
+        video.srcObject = stream;
+        await new Promise(resolve => video.onloadedmetadata = resolve);
+        await video.play();
+        showCameraState('active');
+
+        // Mulai scan loop
+        if ('BarcodeDetector' in window) {
+            startBarcodeScanning();
+        } else {
+            document.getElementById('scanStatus').textContent =
+                'Point camera at QR code';
+        }
+
+    } catch (err) {
+        showCameraState('idle');
+        const errEl = document.getElementById('cameraError');
+        errEl.style.display = 'block';
+
+        if (err.name === 'NotAllowedError') {
+            errEl.textContent =
+                '⚠️ Camera access denied. Click the camera icon in your browser address bar to allow access.';
+        } else if (err.name === 'NotFoundError') {
+            errEl.textContent =
+                '⚠️ No camera found on this device.';
+        } else if (err.name === 'NotReadableError') {
+            errEl.textContent =
+                '⚠️ Camera is in use by another application. Close it and try again.';
+        } else {
+            errEl.textContent =
+                `⚠️ Camera error: ${err.message}. Try manual input instead.`;
+        }
+    }
+}
+
+// ── Camera: Stop ──────────────────────────────────────────────
+function stopCamera() {
+    if (scanInterval)  { clearInterval(scanInterval); scanInterval = null; }
+    if (videoStream)   {
+        videoStream.getTracks().forEach(t => t.stop());
+        videoStream = null;
+    }
+    showCameraState('idle');
+    document.getElementById('cameraError').style.display = 'none';
+    lastScannedCode = '';
+}
+
+// ── Camera state ──────────────────────────────────────────────
+function showCameraState(state) {
+    document.getElementById('cameraIdle').style.display    =
+        state === 'idle'    ? 'block' : 'none';
+    document.getElementById('cameraLoading').style.display =
+        state === 'loading' ? 'block' : 'none';
+    document.getElementById('cameraActive').style.display  =
+        state === 'active'  ? 'block' : 'none';
+}
+
+// ── BarcodeDetector scan loop ─────────────────────────────────
+function startBarcodeScanning() {
+    const detector = new BarcodeDetector({ formats: ['qr_code'] });
+    const video    = document.getElementById('videoEl');
+    const canvas   = document.getElementById('canvasEl');
+    const ctx      = canvas.getContext('2d');
+
+    scanInterval = setInterval(async () => {
+        if (!videoStream || video.readyState < 2) return;
+        if (isLookingUp) return;
+
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+
+        try {
+            const codes = await detector.detect(canvas);
+            if (codes.length > 0) {
+                const code = codes[0].rawValue;
+                if (code && code !== lastScannedCode) {
+                    lastScannedCode = code;
+                    document.getElementById('qrInput').value = code;
+                    document.getElementById('scanStatus').textContent =
+                        `✓ Detected!`;
+
+                    // Flash effect
+                    const area = document.getElementById('cameraArea');
+                    area.style.border = '2px solid #22c55e';
+                    setTimeout(() => {
+                        area.style.border = '2px dashed var(--border)';
+                    }, 600);
+
+                    lookupItem(code);
+                    // Cooldown
+                    setTimeout(() => { lastScannedCode = ''; }, 4000);
+                }
+            }
+        } catch { /* ignore */ }
+    }, 400);
+}
+
+// ── Lookup item ───────────────────────────────────────────────
+async function lookupItem(code) {
+    const input = (code || document.getElementById('qrInput').value).trim();
+    if (!input || isLookingUp) return;
+
+    isLookingUp = true;
+    showDetailState('loading');
+
+    try {
+        const fd = new FormData();
+        fd.append('code', input);
+        fd.append('csrf_token', '{{ csrf_token() }}');
+
+        const res  = await fetch('{{ url_for("opname.lookup") }}', {
+            method: 'POST', body: fd,
+        });
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+            showDetailState('error', data.error || 'Item not found');
+            isLookingUp = false;
+            return;
+        }
+
+        fillItemDetails(data);
+        showDetailState('found');
+
+        // Auto stop camera setelah item ditemukan
+        if (videoStream) {
+            setTimeout(stopCamera, 800);
+        }
+
+    } catch {
+        showDetailState('error', 'Network error. Please try again.');
+    } finally {
+        isLookingUp = false;
+    }
+}
+
+// ── Fill detail panel ─────────────────────────────────────────
+function fillItemDetails(d) {
+    document.getElementById('formItemId').value            = d.id;
+    document.getElementById('detailItemCode').textContent  = d.item_code;
+    document.getElementById('detailName').textContent      = d.name;
+    document.getElementById('detailCategory').textContent  = d.category  || '-';
+    document.getElementById('detailBrand').textContent     = d.brand     || '-';
+    document.getElementById('detailCondition').textContent = d.condition || '-';
+    document.getElementById('detailQuantity').textContent  = d.quantity + ' pcs';
+    document.getElementById('detailLocation').textContent  = d.location  || '-';
+    document.getElementById('detailHolder').textContent    = d.holder    || '-';
+
+    const badge = document.getElementById('detailStatusBadge');
+    const map   = {
+        available : { label:'Available', cls:'badge-available' },
+        in_use    : { label:'In Use',    cls:'badge-in-use'    },
+        damaged   : { label:'Damaged',   cls:'badge-damaged'   },
+        lost      : { label:'Lost',      cls:'badge-lost'      },
+    };
+    const s = map[d.status] || { label: d.status, cls: '' };
+    badge.textContent = s.label;
+    badge.className   = `badge ${s.cls}`;
+}
+
+// ── Detail panel state ────────────────────────────────────────
+function showDetailState(state, msg) {
+    ['empty','loading','error','found'].forEach(s => {
+        document.getElementById(`detail${s.charAt(0).toUpperCase()+s.slice(1)}`)
+            .style.display = (s === state) ? 'block' : 'none';
+    });
+    if (state === 'error' && msg) {
+        document.getElementById('detailErrorMsg').textContent = msg;
+    }
+}
+
+// ── Reset ─────────────────────────────────────────────────────
+function resetPanel() {
+    showDetailState('empty');
+    document.getElementById('qrInput').value = '';
+    lastScannedCode = '';
+    isLookingUp     = false;
+}
+
+// ── Cleanup on leave ──────────────────────────────────────────
+window.addEventListener('beforeunload', stopCamera);
+</script>
+{% endblock %}

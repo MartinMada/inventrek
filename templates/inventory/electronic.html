@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+{% block title %}Electronic Assets{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Electronic Assets</h1>
+        <p class="page-subtitle">Electronics and IT equipment inventory</p>
+    </div>
+    <button class="btn btn-primary" onclick="openModal('addModal')">
+        <i class="bi bi-plus-lg"></i> Add Electronic Asset
+    </button>
+</div>
+
+<div class="table-wrap">
+    <div class="table-toolbar">
+        <div class="table-search">
+            <input type="text" placeholder="Search electronics..." oninput="filterTable(this.value)">
+        </div>
+    </div>
+    <table id="masterTable">
+        <thead>
+            <tr>
+                <th>ITEM ID</th>
+                <th>NAME</th>
+                <th>BRAND</th>
+                <th>MODEL</th>
+                <th>SERIAL NUMBER</th>
+                <th>CONDITION</th>
+                <th>HOLDER</th>
+                <th>ACTIONS</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="item-id">{{ item.item_code }}</td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.brand.name if item.brand else '-' }}</td>
+                <td>{{ item.model or '-' }}</td>
+                <td>{{ item.serial_number or '-' }}</td>
+                <td>
+                    {% set cond = item.condition.name if item.condition else '-' %}
+                    {% if cond == 'Good' %}
+                    <span class="badge badge-good">Good</span>
+                    {% elif 'Damage' in cond %}
+                    <span class="badge badge-damaged">{{ cond }}</span>
+                    {% else %}
+                    <span>{{ cond }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.holder.name if item.holder else '-' }}</td>
+                <td>
+                    <div class="action-btns">
+                        <button class="action-btn view" title="View" onclick="viewItem({{ item.id }})">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="action-btn edit" title="Edit" onclick="editItem({{ item.id }})">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <form method="POST" action="{{ url_for('inventory.delete_item', id=item.id) }}"
+                            onsubmit="return confirm('Delete this item?')" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="action-btn delete" title="Delete">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💻</div>
+                        <p>No electronic assets yet.</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Add Modal -->
+<div class="modal-overlay" id="addModal">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <div class="modal-title">Add Electronic Asset</div>
+            <button class="modal-close" onclick="closeModal('addModal')">✕</button>
+        </div>
+        <form method="POST" action="{{ url_for('inventory.add_item') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="item_type" value="electronic">
+            <input type="hidden" name="redirect_to" value="inventory.electronic">
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Item Name *</label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. Dell Laptop XPS 15"
+                            required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Brand</label>
+                        <select name="brand_id" class="form-control">
+                            <option value="">-- Select Brand --</option>
+                            {% for brand in brands %}
+                            <option value="{{ brand.id }}">{{ brand.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Model</label>
+                        <input type="text" name="model" class="form-control" placeholder="e.g. XPS 15 9520">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Serial Number</label>
+                        <input type="text" name="serial_number" class="form-control" placeholder="e.g. DL123456789">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Condition</label>
+                        <select name="condition_id" class="form-control">
+                            <option value="">-- Select Condition --</option>
+                            {% for cond in conditions %}
+                            <option value="{{ cond.id }}">{{ cond.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Holder / PIC</label>
+                        <select name="holder_id" class="form-control">
+                            <option value="">-- No Holder --</option>
+                            {% for h in holders %}
+                            <option value="{{ h.id }}">{{ h.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Location</label>
+                        <select name="location_id" class="form-control">
+                            <option value="">-- Select Location --</option>
+                            {% for loc in locations %}
+                            <option value="{{ loc.id }}">{{ loc.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-control">
+                            <option value="available">Available</option>
+                            <option value="in_use">In Use</option>
+                            <option value="damaged">Damaged</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Unit Price (Rp)</label>
+                        <input type="number" name="unit_price" class="form-control" placeholder="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Purchase Date</label>
+                        <input type="date" name="purchase_date" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <input type="hidden" name="quantity" value="1">
+                    <label class="form-label">Notes</label>
+                    <input type="text" name="notes" class="form-control" placeholder="Additional notes...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('addModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Asset</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <div class="modal-title">Edit Electronic Asset</div>
+            <button class="modal-close" onclick="closeModal('editModal')">✕</button>
+        </div>
+        <form method="POST" id="editForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="item_type" value="electronic">
+            <input type="hidden" name="redirect_to" value="inventory.electronic">
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Item Name *</label>
+                        <input type="text" name="name" id="eName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Brand</label>
+                        <select name="brand_id" id="eBrand" class="form-control">
+                            <option value="">-- Select Brand --</option>
+                            {% for brand in brands %}
+                            <option value="{{ brand.id }}">{{ brand.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Model</label>
+                        <input type="text" name="model" id="eModel" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Serial Number</label>
+                        <input type="text" name="serial_number" id="eSerial" class="form-control">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Condition</label>
+                        <select name="condition_id" id="eCondition" class="form-control">
+                            <option value="">-- Select Condition --</option>
+                            {% for cond in conditions %}
+                            <option value="{{ cond.id }}">{{ cond.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Holder / PIC</label>
+                        <select name="holder_id" id="eHolder" class="form-control">
+                            <option value="">-- No Holder --</option>
+                            {% for h in holders %}
+                            <option value="{{ h.id }}">{{ h.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Location</label>
+                        <select name="location_id" id="eLocation" class="form-control">
+                            <option value="">-- Select Location --</option>
+                            {% for loc in locations %}
+                            <option value="{{ loc.id }}">{{ loc.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select name="status" id="eStatus" class="form-control">
+                            <option value="available">Available</option>
+                            <option value="in_use">In Use</option>
+                            <option value="damaged">Damaged</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Unit Price (Rp)</label>
+                        <input type="number" name="unit_price" id="ePrice" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Purchase Date</label>
+                        <input type="date" name="purchase_date" id="eDate" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <input type="hidden" name="quantity" value="1">
+                    <label class="form-label">Notes</label>
+                    <input type="text" name="notes" id="eNotes" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('editModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function filterTable(q) {
+        q = q.toLowerCase();
+        document.querySelectorAll('#masterTable tbody tr').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    }
+
+    async function editItem(id) {
+        const res = await fetch(`/inventory/${id}/json`);
+        const data = await res.json();
+        document.getElementById('editForm').action = `/inventory/${id}/edit`;
+        document.getElementById('eName').value = data.name;
+        document.getElementById('eBrand').value = data.brand_id || '';
+        document.getElementById('eModel').value = data.model;
+        document.getElementById('eSerial').value = data.serial_number;
+        document.getElementById('eCondition').value = data.condition_id || '';
+        document.getElementById('eHolder').value = data.holder_id || '';
+        document.getElementById('eLocation').value = data.location_id || '';
+        document.getElementById('eStatus').value = data.status;
+        document.getElementById('ePrice').value = data.unit_price;
+        document.getElementById('eDate').value = data.purchase_date;
+        document.getElementById('eNotes').value = data.notes;
+        openModal('editModal');
+    }
+
+    function viewItem(id) {
+        window.location.href = `/inventory/${id}/json`;
+    }
+</script>
+{% endblock %}

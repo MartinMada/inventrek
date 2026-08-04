@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Settings</h1>
+        <p class="page-subtitle">Manage application settings and preferences</p>
+    </div>
+</div>
+
+<form method="POST" action="{{ url_for('settings.save') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start">
+
+        <!-- Left -->
+        <div style="display:flex;flex-direction:column;gap:20px">
+
+            <!-- Company Info -->
+            <div class="card">
+                <div class="card-header">Company Information</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Company Name</label>
+                        <input type="text" name="company_name" class="form-control"
+                            value="{{ settings.get('company_name','') }}">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0">
+                        <label class="form-label">Company Logo</label>
+                        <div style="display:flex;align-items:center;gap:12px">
+                            <div style="width:60px;height:60px;border:2px dashed var(--border);
+                        border-radius:var(--radius-sm);display:flex;
+                        align-items:center;justify-content:center;
+                        font-size:1.5rem">🏢</div>
+                            <div>
+                                <button type="button" class="btn btn-outline" style="font-size:12px">
+                                    Upload Logo
+                                </button>
+                                <div style="font-size:11px;color:var(--muted);margin-top:4px">
+                                    Recommended size: 200x200px
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory Settings -->
+            <div class="card">
+                <div class="card-header">Inventory Settings</div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Item ID Numbering Format</label>
+                        <input type="text" name="item_id_format" class="form-control"
+                            value="{{ settings.get('item_id_format','INV-YYYY-###') }}">
+                        <div style="font-size:11px;color:var(--muted);margin-top:4px">
+                            YYYY = Year, MM = Month, ### = Sequential number
+                        </div>
+                    </div>
+
+                    <div style="display:flex;justify-content:space-between;
+                    align-items:center;padding:14px 0;
+                    border-top:1px solid var(--border)">
+                        <div>
+                            <div style="font-size:13.5px;font-weight:500">Enable QR Code Generation</div>
+                            <div style="font-size:12px;color:var(--muted)">
+                                Automatically generate QR codes for new items
+                            </div>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" name="enable_qr" {{ 'checked' if settings.get('enable_qr')=='true'
+                                else '' }}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div style="display:flex;justify-content:space-between;
+                    align-items:center;padding:14px 0;
+                    border-top:1px solid var(--border)">
+                        <div>
+                            <div style="font-size:13.5px;font-weight:500">
+                                Require Serial Number for Electronics
+                            </div>
+                            <div style="font-size:12px;color:var(--muted)">
+                                Make serial number mandatory for electronic items
+                            </div>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" name="require_serial" {{ 'checked' if
+                                settings.get('require_serial')=='true' else '' }}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notification Settings -->
+            <div class="card">
+                <div class="card-header">Notification Settings</div>
+                <div class="card-body">
+                    <div style="display:flex;justify-content:space-between;
+                    align-items:center;padding:14px 0;
+                    border-bottom:1px solid var(--border)">
+                        <div>
+                            <div style="font-size:13.5px;font-weight:500">Email Notifications</div>
+                            <div style="font-size:12px;color:var(--muted)">
+                                Send email alerts for important events
+                            </div>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" name="email_notif" {{ 'checked' if
+                                settings.get('email_notif')=='true' else '' }}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div style="display:flex;justify-content:space-between;
+                    align-items:center;padding:14px 0">
+                        <div>
+                            <div style="font-size:13.5px;font-weight:500">Stock Opname Reminders</div>
+                            <div style="font-size:12px;color:var(--muted)">
+                                Monthly reminder to perform stock opname
+                            </div>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" name="opname_reminder" {{ 'checked' if
+                                settings.get('opname_reminder')=='true' else '' }}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Save Button -->
+            <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;font-size:14px">
+                <i class="bi bi-save"></i> Save Settings
+            </button>
+        </div>
+
+        <!-- Right -->
+        <div style="display:flex;flex-direction:column;gap:20px">
+
+            <!-- Data Backup -->
+            <div class="card">
+                <div class="card-header">Data Backup</div>
+                <div class="card-body">
+                    <div style="background:var(--blue-bg);border:1px solid #bfdbfe;
+                    border-radius:var(--radius-sm);padding:12px;
+                    margin-bottom:16px">
+                        <div style="font-size:12px;font-weight:600;color:var(--blue-text)">
+                            <i class="bi bi-database"></i> Last Backup
+                        </div>
+                        <div style="font-size:12px;color:var(--blue-text);margin-top:2px">
+                            Not yet configured
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-success" style="width:100%">
+                        <i class="bi bi-cloud-upload"></i> Backup Now
+                    </button>
+                    <div style="font-size:11px;color:var(--muted);margin-top:12px;line-height:1.8">
+                        • Automatic daily backup: Enabled<br>
+                        • Backup retention: 30 days<br>
+                        • Storage location: Local
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Info -->
+            <div class="card">
+                <div class="card-header">System Information</div>
+                <div class="card-body">
+                    {% for label, value in [
+                    ('Version', '1.0.0'),
+                    ('Database', 'Connected'),
+                    ('Total Items', total_items),
+                    ('Total Users', total_users),
+                    ] %}
+                    <div style="display:flex;justify-content:space-between;
+                    padding:8px 0;border-bottom:1px solid var(--border);
+                    font-size:13px">
+                        <span style="color:var(--muted)">{{ label }}</span>
+                        <span style="font-weight:500">{{ value }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</form>
+{% endblock %}

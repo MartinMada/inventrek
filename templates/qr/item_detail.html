@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}{{ item.item_code }} — Item Detail{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ item.name }}</h1>
+    <p class="page-subtitle">Item Code: <strong>{{ item.item_code }}</strong></p>
+  </div>
+  <div style="display:flex;gap:10px;">
+    <a href="{{ url_for('qr.print_qr', id=item.id) }}"
+       target="_blank" class="btn btn-primary">
+      <i class="bi bi-printer"></i> Print QR Code
+    </a>
+    <a href="{{ url_for('qr.qr_image', item_id=item.id) }}"
+       class="btn btn-outline">
+      <i class="bi bi-download"></i> Download PNG
+    </a>
+    <a href="{{ request.referrer or url_for('inventory.all_items') }}"
+       class="btn btn-outline">
+      <i class="bi bi-arrow-left"></i> Back
+    </a>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start">
+
+  <!-- Detail Info -->
+  <div style="display:flex;flex-direction:column;gap:20px">
+
+    <!-- Basic Info -->
+    <div class="card">
+      <div class="card-header">Item Information</div>
+      <div class="card-body">
+        <table style="width:100%">
+          <tbody>
+            {% for label, value in [
+              ('Item Code',    item.item_code),
+              ('Item Name',    item.name),
+              ('Type',         item.item_type | capitalize),
+              ('Category',     item.category.name if item.category else '-'),
+              ('Brand',        item.brand.name if item.brand else '-'),
+              ('Model',        item.model or '-'),
+              ('Serial No.',   item.serial_number or '-'),
+            ] %}
+            <tr>
+              <td style="padding:10px 0;font-size:13px;color:var(--muted);
+                         width:140px;font-weight:500;border-bottom:1px solid var(--border)">
+                {{ label }}
+              </td>
+              <td style="padding:10px 0;font-size:13px;font-weight:600;
+                         border-bottom:1px solid var(--border)">
+                {{ value }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Status & Location -->
+    <div class="card">
+      <div class="card-header">Status & Location</div>
+      <div class="card-body">
+        <table style="width:100%">
+          <tbody>
+            {% for label, value in [
+              ('Status',    item.status | replace('_',' ') | capitalize),
+              ('Condition', item.condition.name if item.condition else '-'),
+              ('Location',  item.location.name if item.location else '-'),
+              ('Holder',    item.holder.name if item.holder else '-'),
+              ('Quantity',  (item.quantity | string) + ' ' + (item.unit.name if item.unit else 'pcs')),
+            ] %}
+            <tr>
+              <td style="padding:10px 0;font-size:13px;color:var(--muted);
+                         width:140px;font-weight:500;border-bottom:1px solid var(--border)">
+                {{ label }}
+              </td>
+              <td style="padding:10px 0;font-size:13px;font-weight:600;
+                         border-bottom:1px solid var(--border)">
+                {% if label == 'Status' %}
+                  <span class="badge badge-{{ item.status | replace('_','-') }}">{{ value }}</span>
+                {% else %}
+                  {{ value }}
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Purchase Info -->
+    <div class="card">
+      <div class="card-header">Purchase Information</div>
+      <div class="card-body">
+        <table style="width:100%">
+          <tbody>
+            {% for label, value in [
+              ('Unit Price',     'Rp ' + '{:,.0f}'.format(item.unit_price).replace(',','.')),
+              ('Total Value',    'Rp ' + '{:,.0f}'.format(item.total_value).replace(',','.')),
+              ('Purchase Date',  item.purchase_date.strftime('%d %B %Y') if item.purchase_date else '-'),
+              ('Added Date',     item.created_at.strftime('%d %B %Y') if item.created_at else '-'),
+            ] %}
+            <tr>
+              <td style="padding:10px 0;font-size:13px;color:var(--muted);
+                         width:140px;font-weight:500;border-bottom:1px solid var(--border)">
+                {{ label }}
+              </td>
+              <td style="padding:10px 0;font-size:13px;font-weight:600;
+                         border-bottom:1px solid var(--border)">
+                {{ value }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% if item.notes %}
+        <div style="margin-top:16px;padding:12px;background:var(--bg);
+                    border-radius:var(--radius-sm);font-size:13px;color:var(--muted)">
+          <strong style="color:var(--text)">Notes:</strong> {{ item.notes }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- QR Code Panel -->
+  <div style="position:sticky;top:24px;display:flex;flex-direction:column;gap:16px">
+    <div class="card">
+      <div class="card-header">QR Code</div>
+      <div class="card-body" style="text-align:center">
+
+        <!-- QR Image -->
+        <div style="background:#fff;border:1px solid var(--border);
+                    border-radius:var(--radius);padding:16px;
+                    display:inline-block;margin-bottom:16px">
+          <img src="data:image/png;base64,{{ qr_b64 }}"
+               alt="QR Code {{ item.item_code }}"
+               style="width:200px;height:200px;display:block">
+        </div>
+
+        <!-- Item Code below QR -->
+        <div style="font-size:13px;font-weight:700;color:var(--text);
+                    letter-spacing:0.05em;margin-bottom:4px">
+          {{ item.item_code }}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:20px">
+          Scan to verify this item
+        </div>
+
+        <!-- QR Token info -->
+        <div style="background:var(--bg);border-radius:var(--radius-sm);
+                    padding:8px 12px;margin-bottom:16px;
+                    font-family:monospace;font-size:11px;color:var(--muted);
+                    word-break:break-all">
+          {{ item.qr_token }}
+        </div>
+
+        <!-- Action buttons -->
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <a href="{{ url_for('qr.print_qr', id=item.id) }}"
+             target="_blank"
+             class="btn btn-primary" style="width:100%">
+            <i class="bi bi-printer"></i> Print QR Code
+          </a>
+          <a href="{{ url_for('qr.qr_image', item_id=item.id) }}"
+             class="btn btn-outline" style="width:100%">
+            <i class="bi bi-download"></i> Download PNG
+          </a>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Stock Opname History -->
+    {% set opname_records = item.opname_records | sort(attribute='checked_at', reverse=True) %}
+    {% if opname_records %}
+    <div class="card">
+      <div class="card-header">
+        Check History
+        <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px">
+          ({{ opname_records | length }} records)
+        </span>
+      </div>
+      <div class="card-body" style="padding:0;max-height:240px;overflow-y:auto">
+        {% for r in opname_records[:5] %}
+        <div style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:12px">
+          <div style="font-weight:600;color:var(--text)">
+            {{ r.checked_at.strftime('%d %b %Y') }}
+          </div>
+          <div style="color:var(--muted);margin-top:2px">
+            {{ r.condition.name if r.condition else '-' }}
+            · {{ r.checker.name if r.checker else '-' }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}

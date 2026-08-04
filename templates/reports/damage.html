@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Damage / Lost Report{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Damage / Lost Report</h1>
+        <p class="page-subtitle">Items with damage or lost status</p>
+    </div>
+    <button class="btn btn-success" onclick="window.print()">
+        <i class="bi bi-download"></i> Export Data
+    </button>
+</div>
+
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
+    <div class="stat-card">
+        <div>
+            <div class="stat-label">Damaged Items</div>
+            <div class="stat-value">{{ total_damaged }}</div>
+        </div>
+        <div class="stat-icon orange">⚠️</div>
+    </div>
+    <div class="stat-card">
+        <div>
+            <div class="stat-label">Lost Items</div>
+            <div class="stat-value">{{ total_lost }}</div>
+        </div>
+        <div class="stat-icon red">❌</div>
+    </div>
+    <div class="stat-card">
+        <div>
+            <div class="stat-label">Total Loss Value</div>
+            <div class="stat-value" style="font-size:1.1rem">
+                Rp {{ '{:,.0f}'.format(total_loss).replace(',','.') }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="table-wrap">
+    <div class="table-toolbar">
+        <div class="table-search">
+            <input type="text" placeholder="Search items..." oninput="filterTable(this.value)">
+        </div>
+        <select class="form-control" style="width:160px"
+            onchange="window.location.href='/reports/damage?type='+this.value">
+            <option value="" {{ 'selected' if not filter_type }}>All Types</option>
+            <option value="damaged" {{ 'selected' if filter_type=='damaged' }}>Damaged</option>
+            <option value="lost" {{ 'selected' if filter_type=='lost' }}>Lost</option>
+        </select>
+    </div>
+    <table id="masterTable">
+        <thead>
+            <tr>
+                <th>ITEM ID</th>
+                <th>ITEM NAME</th>
+                <th>CATEGORY</th>
+                <th>CONDITION</th>
+                <th>QUANTITY</th>
+                <th>LAST HOLDER</th>
+                <th>LOCATION</th>
+                <th>VALUE</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="item-id">{{ item.item_code }}</td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.category.name if item.category else '-' }}</td>
+                <td>
+                    {% if item.status == 'damaged' %}
+                    <span class="badge badge-damaged">
+                        {{ item.condition.name if item.condition else 'Damaged' }}
+                    </span>
+                    {% else %}
+                    <span class="badge badge-lost">Lost</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.holder.name if item.holder else '-' }}</td>
+                <td>{{ item.location.name if item.location else '-' }}</td>
+                <td>Rp {{ '{:,.0f}'.format(item.total_value).replace(',','.') }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✅</div>
+                        <p>No damaged or lost items. Great!</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    function filterTable(q) {
+        q = q.toLowerCase();
+        document.querySelectorAll('#masterTable tbody tr').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    }
+</script>
+{% endblock %}

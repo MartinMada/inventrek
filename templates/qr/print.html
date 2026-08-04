@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Print QR Codes — {{ total }} Item(s)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #f4f6fa;
+      padding: 20px;
+    }
+
+    /* ── Print Toolbar (tidak ikut di-print) ── */
+    .print-toolbar {
+      background: #1e2a4a;
+      color: white;
+      padding: 14px 24px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .print-toolbar h2 {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .print-toolbar p {
+      font-size: 12px;
+      opacity: 0.65;
+      margin-top: 2px;
+    }
+
+    .toolbar-btns {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-print {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 9px 20px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-print:hover { background: #2563eb; }
+
+    .btn-back {
+      background: rgba(255,255,255,0.12);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 9px 20px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-back:hover { background: rgba(255,255,255,0.2); }
+
+    /* ── QR Grid ── */
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── Single QR Card ── */
+    .qr-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px 12px;
+      text-align: center;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .qr-card img {
+      width: 140px;
+      height: 140px;
+      display: block;
+      margin: 0 auto 10px;
+    }
+
+    .qr-item-code {
+      font-size: 11px;
+      font-weight: 800;
+      color: #111827;
+      letter-spacing: 0.06em;
+      margin-bottom: 3px;
+    }
+
+    .qr-item-name {
+      font-size: 10px;
+      color: #6b7280;
+      line-height: 1.4;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      margin-bottom: 6px;
+    }
+
+    .qr-item-meta {
+      font-size: 9px;
+      color: #9ca3af;
+    }
+
+    .qr-divider {
+      border: none;
+      border-top: 1px dashed #e5e7eb;
+      margin: 8px 0;
+    }
+
+    .qr-scan-label {
+      font-size: 8px;
+      color: #9ca3af;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* ── Print Media Query ── */
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+
+      .print-toolbar { display: none !important; }
+
+      .qr-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+
+      .qr-card {
+        border: 1px solid #d1d5db;
+        padding: 10px 8px;
+      }
+
+      .qr-card img {
+        width: 120px;
+        height: 120px;
+      }
+
+      @page {
+        margin: 1cm;
+        size: A4;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Print Toolbar -->
+  <div class="print-toolbar">
+    <div>
+      <h2>🖨️ Print QR Codes</h2>
+      <p>{{ total }} item(s) ready to print</p>
+    </div>
+    <div class="toolbar-btns">
+      <a href="javascript:history.back()" class="btn-back">
+        ← Back
+      </a>
+      <button class="btn-print" onclick="window.print()">
+        🖨️ Print Now
+      </button>
+    </div>
+  </div>
+
+  <!-- QR Grid -->
+  <div class="qr-grid">
+    {% for entry in items_with_qr %}
+    {% set item = entry.item %}
+    <div class="qr-card">
+
+      <!-- QR Code Image -->
+      <img src="data:image/png;base64,{{ entry.qr_b64 }}"
+           alt="QR Code {{ item.item_code }}">
+
+      <hr class="qr-divider">
+
+      <!-- Item Info -->
+      <div class="qr-item-code">{{ item.item_code }}</div>
+      <div class="qr-item-name">{{ item.name }}</div>
+
+      <div class="qr-item-meta">
+        {% if item.location %}📍 {{ item.location.name }}{% endif %}
+        {% if item.condition %} · {{ item.condition.name }}{% endif %}
+      </div>
+
+      <hr class="qr-divider">
+      <div class="qr-scan-label">Scan to verify</div>
+
+    </div>
+    {% endfor %}
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Borrowing Report{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Borrowing Report</h1>
+        <p class="page-subtitle">Items currently borrowed by staff</p>
+    </div>
+    <button class="btn btn-success" onclick="window.print()">
+        <i class="bi bi-download"></i> Export Data
+    </button>
+</div>
+
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
+    <div class="stat-card">
+        <div>
+            <div class="stat-label">Total Borrowed Items</div>
+            <div class="stat-value">{{ total_borrowed }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div>
+            <div class="stat-label">Active Borrowers</div>
+            <div class="stat-value">{{ borrowers }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div>
+            <div class="stat-label">Total Value</div>
+            <div class="stat-value" style="font-size:1.1rem">
+                Rp {{ '{:,.0f}'.format(total_value).replace(',','.') }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="table-wrap">
+    <div class="table-toolbar">
+        <div class="table-search">
+            <input type="text" placeholder="Search borrowed items..." oninput="filterTable(this.value)">
+        </div>
+    </div>
+    <table id="masterTable">
+        <thead>
+            <tr>
+                <th>ITEM ID</th>
+                <th>ITEM NAME</th>
+                <th>CATEGORY</th>
+                <th>QUANTITY</th>
+                <th>HOLDER</th>
+                <th>DIVISION</th>
+                <th>LOCATION</th>
+                <th>PURCHASE DATE</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="item-id">{{ item.item_code }}</td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.category.name if item.category else '-' }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.holder.name if item.holder else '-' }}</td>
+                <td>{{ item.holder.division if item.holder else '-' }}</td>
+                <td>{{ item.location.name if item.location else '-' }}</td>
+                <td>{{ item.purchase_date.strftime('%Y-%m-%d') if item.purchase_date else '-' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <p>No borrowed items.</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    function filterTable(q) {
+        q = q.toLowerCase();
+        document.querySelectorAll('#masterTable tbody tr').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    }
+</script>
+{% endblock %}

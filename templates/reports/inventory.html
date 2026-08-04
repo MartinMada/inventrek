@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Inventory Report{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Inventory Report</h1>
+        <p class="page-subtitle">Complete inventory summary and details</p>
+    </div>
+    <button class="btn btn-success" onclick="window.print()">
+        <i class="bi bi-download"></i> Export Data
+    </button>
+</div>
+
+<!-- Summary Stats -->
+<div class="stats-grid" style="margin-bottom:24px">
+    <div class="stat-card">
+        <div>
+            <div class="stat-label">Total Items</div>
+            <div class="stat-value">{{ total_items }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div>
+            <div class="stat-label">Total SKU</div>
+            <div class="stat-value">{{ total_sku }}</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div>
+            <div class="stat-label">Total Value</div>
+            <div class="stat-value" style="font-size:1.1rem">
+                Rp {{ '{:,.0f}'.format(total_value).replace(',','.') }}
+            </div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div>
+            <div class="stat-label">Categories</div>
+            <div class="stat-value">{{ cat_count }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="table-wrap">
+    <div class="table-toolbar">
+        <select class="form-control" style="width:200px"
+            onchange="window.location.href='/reports/inventory?category='+this.value">
+            <option value="">All Categories</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}" {{ 'selected' if request.args.get('category')==cat.id|string }}>
+                {{ cat.name }}
+            </option>
+            {% endfor %}
+        </select>
+        <select class="form-control" style="width:200px"
+            onchange="window.location.href='/reports/inventory?location='+this.value">
+            <option value="">All Locations</option>
+            {% for loc in locations %}
+            <option value="{{ loc.id }}" {{ 'selected' if request.args.get('location')==loc.id|string }}>
+                {{ loc.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>ITEM ID</th>
+                <th>NAME</th>
+                <th>CATEGORY</th>
+                <th>BRAND</th>
+                <th>QUANTITY</th>
+                <th>CONDITION</th>
+                <th>LOCATION</th>
+                <th>UNIT PRICE</th>
+                <th>TOTAL VALUE</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td class="item-id">{{ item.item_code }}</td>
+                <td>{{ item.name }}</td>
+                <td>{{ item.category.name if item.category else '-' }}</td>
+                <td>{{ item.brand.name if item.brand else '-' }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.condition.name if item.condition else '-' }}</td>
+                <td>{{ item.location.name if item.location else '-' }}</td>
+                <td>Rp {{ '{:,.0f}'.format(item.unit_price).replace(',','.') }}</td>
+                <td>Rp {{ '{:,.0f}'.format(item.total_value).replace(',','.') }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📊</div>
+                        <p>No items found.</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

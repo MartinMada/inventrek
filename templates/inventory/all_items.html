@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% block title %}All Items{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">All Items</h1>
+        <p class="page-subtitle">Complete inventory list</p>
+    </div>
+    <button class="btn btn-primary" onclick="openModal('addModal')">
+        <i class="bi bi-plus-lg"></i> Add Item
+    </button>
+</div>
+
+<form method="POST" action="{{ url_for('qr.batch_print') }}" id="batchForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="table-wrap">
+        <div class="table-toolbar">
+            <div class="table-search">
+                <input type="text" placeholder="Search items..." oninput="filterTable(this.value)">
+            </div>
+            <select class="form-control" style="width:200px"
+                onchange="window.location.href='/inventory/all?category='+this.value">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}" {{ 'selected' if request.args.get('category')==cat.id|string else '' }}>
+                    {{ cat.name }}
+                </option>
+                {% endfor %}
+            </select>
+            <select class="form-control" style="width:200px"
+                onchange="window.location.href='/inventory/all?location='+this.value">
+                <option value="">All Locations</option>
+                {% for loc in locations %}
+                <option value="{{ loc.id }}" {{ 'selected' if request.args.get('location')==loc.id|string else '' }}>
+                    {{ loc.name }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <!-- Batch Print Button -->
+            <button type="submit" class="btn btn-outline"
+                    onclick="return checkSelected()"
+                    title="Print selected QR codes">
+                <i class="bi bi-printer"></i> Print QR
+                <span id="selectedCount"
+                      style="display:none;background:#1e3a5f;color:#fff;
+                             padding:1px 7px;border-radius:10px;font-size:11px;
+                             margin-left:4px">0</span>
+            </button>
+        </div>
+
+        <table id="masterTable">
+            <thead>
+                <tr>
+                    <th style="width:36px">
+                        <input type="checkbox" id="selectAll"
+                               onchange="toggleAll(this)" title="Select all">
+                    </th>
+                    <th>ITEM ID</th>
+                    <th>NAME</th>
+                    <th>CATEGORY</th>
+                    <th>BRAND</th>
+                    <th>QUANTITY</th>
+                    <th>CONDITION</th>
+                    <th>LOCATION</th>
+                    <th>HOLDER</th>
+                    <th>STATUS</th>
+                    <th>ACTIONS</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>
+                        <input type="checkbox" name="selected_ids"
+                               value="{{ item.id }}" class="row-check"
+                               onchange="updateCount()">
+                    </td>
+                    <td class="item-id">{{ item.item_code }}</td>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.category.name if item.category else '-' }}</td>
+                    <td>{{ item.brand.name if item.brand else '-' }}</td>
+                    <td>{{ item.quantity }} {{ item.unit.name if item.unit else 'pcs' }}</td>
+                    <td>{{ item.condition.name if item.condition else '-' }}</td>
+                    <td>{{ item.location.name if item.location else '-' }}</td>
+                    <td>{{ item.holder.name if item.holder else '-' }}</td>
+                    <td>
+                        {% if item.status == 'available' %}
+                        <span class="badge badge-available">Available</span>
+                        {% elif item.status == 'in_use' %}
+                        <span class="badge badge-in-use">In Use</span>
+                        {% elif item.status == 'damaged' %}
+                        <span class="badge badge-damaged">Damaged</span>
+                        {% else %}
+                        <span class="badge badge-lost">Lost</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="action-btns">
+                            <!-- Detail & QR -->
+                            <a href="{{ url_for('qr.item_detail', item_id=item.id) }}"
+                               class="action-btn view" title="View Detail & QR Code">
+                                <i class="bi bi-qr-code"></i>
+                            </a>
+                            <!-- Print QR single -->
+                            <a href="{{ url_for('qr.print_qr', id=item.id) }}"
+                               target="_blank"
+                               class="action-btn" title="Print QR Code"
+                               style="color:var(--text2)">
+                                <i class="bi bi-printer"></i>
+                            </a>
+                            <!-- Delete -->
+                            <form method="POST"
+                                  action="{{ url_for('inventory.delete_item', id=item.id) }}"
+                                  onsubmit="return confirm('Delete {{ item.name }}?')"
+                                  style="display:inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="action-btn delete" title="Delete">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="11">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📦</div>
+                            <p>No items yet. Add your first item.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</form>
+
+<!-- Add Item Modal -->
+<div class="modal-overlay" id="addModal">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <div class="modal-title">Add New Item</div>
+            <button class="modal-close" onclick="closeModal('addModal')">✕</button>
+        </div>
+        <form method="POST" action="{{ url_for('inventory.add_item') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="redirect_to" value="inventory.all_items">
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Item Name *</label>
+                        <input type="text" name="name" class="form-control"
+                               placeholder="e.g. Dell Laptop XPS 15" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Item Type</label>
+                        <select name="item_type" class="form-control">
+                            <option value="general">General</option>
+                            <option value="electronic">Electronic Asset</option>
+                            <option value="sample">Sample Item</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Category</label>
+                        <select name="category_id" class="form-control">
+                            <option value="">-- Select Category --</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Brand</label>
+                        <select name="brand_id" class="form-control">
+                            <option value="">-- Select Brand --</option>
+                            {% for brand in brands %}
+                            <option value="{{ brand.id }}">{{ brand.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" name="quantity" class="form-control"
+                               value="1" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Unit</label>
+                        <select name="unit_id" class="form-control">
+                            <option value="">-- Select Unit --</option>
+                            {% for unit in units %}
+                            <option value="{{ unit.id }}">{{ unit.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Condition</label>
+                        <select name="condition_id" class="form-control">
+                            <option value="">-- Select Condition --</option>
+                            {% for cond in conditions %}
+                            <option value="{{ cond.id }}">{{ cond.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-control">
+                            <option value="available">Available</option>
+                            <option value="in_use">In Use</option>
+                            <option value="damaged">Damaged</option>
+                            <option value="lost">Lost</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Location</label>
+                        <select name="location_id" class="form-control">
+                            <option value="">-- Select Location --</option>
+                            {% for loc in locations %}
+                            <option value="{{ loc.id }}">{{ loc.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Holder / PIC</label>
+                        <select name="holder_id" class="form-control">
+                            <option value="">-- Select Holder --</option>
+                            {% for h in holders %}
+                            <option value="{{ h.id }}">{{ h.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Unit Price (Rp)</label>
+                        <input type="number" name="unit_price" class="form-control"
+                               placeholder="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Purchase Date</label>
+                        <input type="date" name="purchase_date" class="form-control">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Model</label>
+                        <input type="text" name="model" class="form-control"
+                               placeholder="e.g. XPS 15 9520">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Serial Number</label>
+                        <input type="text" name="serial_number" class="form-control"
+                               placeholder="e.g. DL123456789">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <input type="text" name="notes" class="form-control"
+                           placeholder="Additional notes...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline"
+                        onclick="closeModal('addModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Item</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ── Table filter ──────────────────────────────────────────
+    function filterTable(q) {
+        q = q.toLowerCase();
+        document.querySelectorAll('#masterTable tbody tr').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    }
+
+    // ── Select All checkbox ───────────────────────────────────
+    function toggleAll(masterCb) {
+        document.querySelectorAll('.row-check').forEach(cb => {
+            cb.checked = masterCb.checked;
+        });
+        updateCount();
+    }
+
+    // ── Update badge counter ──────────────────────────────────
+    function updateCount() {
+        const checked = document.querySelectorAll('.row-check:checked').length;
+        const badge   = document.getElementById('selectedCount');
+        if (checked > 0) {
+            badge.style.display = 'inline';
+            badge.textContent   = checked;
+        } else {
+            badge.style.display = 'none';
+        }
+        // Sync master checkbox
+        const total = document.querySelectorAll('.row-check').length;
+        document.getElementById('selectAll').checked = checked === total && total > 0;
+        document.getElementById('selectAll').indeterminate = checked > 0 && checked < total;
+    }
+
+    // ── Validate before batch print ───────────────────────────
+    function checkSelected() {
+        const checked = document.querySelectorAll('.row-check:checked').length;
+        if (checked === 0) {
+            alert('Please select at least one item to print QR.');
+            return false;
+        }
+        return true;
+    }
+</script>
+{% endblock %}

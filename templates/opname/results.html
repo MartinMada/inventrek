@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Stock Check Result{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Stock Check Result</h1>
+        <p class="page-subtitle">View latest stock opname results</p>
+    </div>
+</div>
+
+<div class="table-wrap" style="margin-bottom:24px">
+    <div class="table-toolbar">
+        <div class="table-search">
+            <input type="text" placeholder="Search stock check results..." oninput="filterTable(this.value)">
+        </div>
+    </div>
+    <table id="masterTable">
+        <thead>
+            <tr>
+                <th>CHECK ID</th>
+                <th>DATE</th>
+                <th>ITEM ID</th>
+                <th>ITEM NAME</th>
+                <th>ACTUAL CONDITION</th>
+                <th>ACTUAL LOCATION</th>
+                <th>CHECKER</th>
+                <th>NOTES</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in records %}
+            <tr>
+                <td class="item-id">{{ r.opname_code }}</td>
+                <td>{{ r.checked_at.strftime('%Y-%m-%d') }}</td>
+                <td class="item-id">{{ r.item.item_code }}</td>
+                <td>{{ r.item.name }}</td>
+                <td>
+                    {% set cname = r.condition.name if r.condition else '-' %}
+                    {% if cname == 'Good' %}
+                    <span class="badge badge-good">Good</span>
+                    {% elif 'Damage' in cname %}
+                    <span class="badge badge-damaged">{{ cname }}</span>
+                    {% elif cname == 'Lost' %}
+                    <span class="badge badge-lost">Lost</span>
+                    {% else %}
+                    <span>{{ cname }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ r.location.name if r.location else '-' }}</td>
+                <td>{{ r.checker.name if r.checker else '-' }}</td>
+                <td style="font-size:12px;color:var(--muted)">
+                    {{ r.notes or '-' }}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <p>No stock check records yet.</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Summary -->
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="stat-card">
+        <div>
+            <div class="stat-label">Total Checked</div>
+            <div class="stat-value">{{ total_checked }}</div>
+        </div>
+        <div class="stat-icon blue">✅</div>
+    </div>
+    <div class="stat-card">
+        <div>
+            <div class="stat-label">Good Condition</div>
+            <div class="stat-value">{{ good_condition }}</div>
+        </div>
+        <div class="stat-icon green">✅</div>
+    </div>
+    <div class="stat-card">
+        <div>
+            <div class="stat-label">Issues Found</div>
+            <div class="stat-value">{{ issues_found }}</div>
+        </div>
+        <div class="stat-icon orange">⚠️</div>
+    </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+    function filterTable(q) {
+        q = q.toLowerCase();
+        document.querySelectorAll('#masterTable tbody tr').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Units{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Units</h1>
+        <p class="page-subtitle">Manage measurement units</p>
+    </div>
+    <button class="btn btn-primary" onclick="openModal('addModal')">
+        <i class="bi bi-plus-lg"></i> Add Unit
+    </button>
+</div>
+
+<div class="table-wrap">
+    <div class="table-toolbar">
+        <div class="table-search">
+            <input type="text" placeholder="Search units..." oninput="filterTable(this.value)">
+        </div>
+    </div>
+    <table id="masterTable">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>UNIT NAME</th>
+                <th>ACTIONS</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td>{{ item.name }}</td>
+                <td>
+                    <div class="action-btns">
+                        <button class="action-btn edit" onclick="openEdit({{ item.id }}, '{{ item.name }}')"
+                            title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <form method="POST" action="{{ url_for('master.delete_unit', id=item.id) }}"
+                            onsubmit="return confirm('Delete this unit?')" style="display:inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="action-btn delete" title="Delete">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="3">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📏</div>
+                        <p>No units yet.</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Add Modal -->
+<div class="modal-overlay" id="addModal">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title">Add Unit</div>
+            <button class="modal-close" onclick="closeModal('addModal')">✕</button>
+        </div>
+        <form method="POST" action="{{ url_for('master.add_unit') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Unit Name *</label>
+                    <input type="text" name="name" class="form-control" placeholder="e.g. pcs" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('addModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Unit</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title">Edit Unit</div>
+            <button class="modal-close" onclick="closeModal('editModal')">✕</button>
+        </div>
+        <form method="POST" id="editForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Unit Name *</label>
+                    <input type="text" name="name" id="editName" class="form-control" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('editModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+    function openEdit(id, name) {
+        document.getElementById('editForm').action = `/master/units/${id}/edit`;
+        document.getElementById('editName').value = name;
+        openModal('editModal');
+    }
+    function filterTable(q) {
+        q = q.toLowerCase();
+        document.querySelectorAll('#masterTable tbody tr').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+        });
+    }
+</script>
+{% endblock %}
