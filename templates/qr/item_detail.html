@@ -8,6 +8,7 @@
     <p class="page-subtitle">Item Code: <strong>{{ item.item_code }}</strong></p>
   </div>
   <div style="display:flex;gap:10px;">
+    {% if item.qr_token %}
     <a href="{{ url_for('qr.print_qr', id=item.id) }}"
        target="_blank" class="btn btn-primary">
       <i class="bi bi-printer"></i> Print QR Code
@@ -16,6 +17,7 @@
        class="btn btn-outline">
       <i class="bi bi-download"></i> Download PNG
     </a>
+    {% endif %}
     <a href="{{ request.referrer or url_for('inventory.all_items') }}"
        class="btn btn-outline">
       <i class="bi bi-arrow-left"></i> Back
@@ -23,7 +25,7 @@
   </div>
 </div>
 
-<div style="display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start">
+<div class="split-layout">
 
   <!-- Detail Info -->
   <div style="display:flex;flex-direction:column;gap:20px">
@@ -134,6 +136,7 @@
       <div class="card-header">QR Code</div>
       <div class="card-body" style="text-align:center">
 
+        {% if item.qr_token %}
         <!-- QR Image -->
         <div style="background:#fff;border:1px solid var(--border);
                     border-radius:var(--radius);padding:16px;
@@ -172,6 +175,21 @@
             <i class="bi bi-download"></i> Download PNG
           </a>
         </div>
+        {% else %}
+        <!-- No QR generated -->
+        <div style="padding:28px 12px;display:flex;flex-direction:column;align-items:center;gap:10px">
+          <i class="bi bi-qr-code" style="font-size:40px;color:var(--border-strong);opacity:.5"></i>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">No QR code generated</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.5">
+            QR generation was turned off in Settings when this item was added.
+            Enable it and edit this item to generate one — or find it manually
+            with item code <strong>{{ item.item_code }}</strong> during Stock Opname.
+          </div>
+          <a href="{{ url_for('settings.index') }}" class="btn btn-outline" style="margin-top:6px">
+            <i class="bi bi-gear"></i> Go to Settings
+          </a>
+        </div>
+        {% endif %}
 
       </div>
     </div>
@@ -190,7 +208,7 @@
         {% for r in opname_records[:5] %}
         <div style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:12px">
           <div style="font-weight:600;color:var(--text)">
-            {{ r.checked_at.strftime('%d %b %Y') }}
+            {{ r.checked_at | wib }}
           </div>
           <div style="color:var(--muted);margin-top:2px">
             {{ r.condition.name if r.condition else '-' }}

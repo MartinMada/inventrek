@@ -29,6 +29,7 @@ def create_app():
     app.config['REMEMBER_COOKIE_DURATION']       = timedelta(hours=8)
     app.config['SESSION_REFRESH_EACH_REQUEST']   = True
     app.config['WTF_CSRF_TIME_LIMIT']            = 3600
+    app.config['MAX_CONTENT_LENGTH']             = 5 * 1024 * 1024  # 5 MB upload limit (company logo)
 
     # ── Database ──────────────────────────────────────────────
     database_url = os.environ.get('DATABASE_URL', 'sqlite:///inventrek.db')
@@ -62,6 +63,30 @@ def create_app():
         response.headers['X-XSS-Protection']       = '1; mode=block'
         response.headers['Referrer-Policy']        = 'strict-origin-when-cross-origin'
         return response
+
+    # ── Jinja2 filter: display a UTC datetime as WIB (UTC+7) ────────
+    from datetime import timedelta as _td
+    def _fmt_wib(dt, fmt='%Y-%m-%d %H:%M WIB'):
+        """Convert a naive UTC datetime to WIB (UTC+7) and format it."""
+        if dt is None:
+            return '-'
+        return (dt + _td(hours=7)).strftime(fmt)
+    app.jinja_env.filters['wib'] = _fmt_wib
+
+    # ── Company logo — available in every template via {{ company_logo_url }} ──
+    @app.context_processor
+    def inject_company_logo():
+        from models import Setting
+        logo_path = None
+        try:
+            row = Setting.query.filter_by(key='company_logo').first()
+            logo_path = row.value if row and row.value else None
+        except Exception:
+            logo_path = None  # e.g. during first-run before tables exist
+        if logo_path:
+            from flask import url_for
+            return {'company_logo_url': url_for('static', filename=logo_path)}
+        return {'company_logo_url': None}
 
     # ── Rate limit error handler ──────────────────────────────
     @app.errorhandler(429)
@@ -99,6 +124,7 @@ def create_app():
         return render_template('errors/404.html'), 404
 
     # ── Database & Seed ───────────────────────────────────────
+    os.makedirs(os.path.join(app.static_folder, 'uploads'), exist_ok=True)
     with app.app_context():
         db.create_all()
         seed_initial_data()

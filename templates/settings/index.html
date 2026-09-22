@@ -9,10 +9,10 @@
     </div>
 </div>
 
-<form method="POST" action="{{ url_for('settings.save') }}">
+<form method="POST" action="{{ url_for('settings.save') }}" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start">
+    <div class="split-layout" style="--split-w:340px">
 
         <!-- Left -->
         <div style="display:flex;flex-direction:column;gap:20px">
@@ -29,16 +29,26 @@
                     <div class="form-group" style="margin-bottom:0">
                         <label class="form-label">Company Logo</label>
                         <div style="display:flex;align-items:center;gap:12px">
-                            <div style="width:60px;height:60px;border:2px dashed var(--border);
+                            <div id="logoPreviewBox" style="width:60px;height:60px;border:2px dashed var(--border-strong);
                         border-radius:var(--radius-sm);display:flex;
                         align-items:center;justify-content:center;
-                        font-size:1.5rem">🏢</div>
+                        font-size:1.5rem;overflow:hidden;background:#fff;flex-shrink:0">
+                                {% if company_logo_url %}
+                                <img id="logoPreviewImg" src="{{ company_logo_url }}" alt="Company logo"
+                                     style="width:100%;height:100%;object-fit:contain">
+                                {% else %}
+                                <span id="logoPreviewEmoji">🏢</span>
+                                <img id="logoPreviewImg" src="" alt="Company logo" style="width:100%;height:100%;object-fit:contain;display:none">
+                                {% endif %}
+                            </div>
                             <div>
-                                <button type="button" class="btn btn-outline" style="font-size:12px">
+                                <label for="logoInput" class="btn btn-outline" style="font-size:12px;cursor:pointer">
                                     Upload Logo
-                                </button>
+                                </label>
+                                <input type="file" id="logoInput" name="company_logo" accept=".png,.jpg,.jpeg,.webp,.svg"
+                                       style="display:none" onchange="previewLogo(this)">
                                 <div style="font-size:11px;color:var(--muted);margin-top:4px">
-                                    Recommended size: 200x200px
+                                    PNG/JPG/WEBP/SVG · max 5MB · recommended 200×200px
                                 </div>
                             </div>
                         </div>
@@ -65,11 +75,13 @@
                         <div>
                             <div style="font-size:13.5px;font-weight:500">Enable QR Code Generation</div>
                             <div style="font-size:12px;color:var(--muted)">
-                                Automatically generate QR codes for new items
+                                Automatically generate a QR code for every new item.
+                                Turning this off means new items won't have a QR code
+                                and must be found manually (by item code) during Stock Opname.
                             </div>
                         </div>
                         <label class="toggle">
-                            <input type="checkbox" name="enable_qr" {{ 'checked' if settings.get('enable_qr')=='true'
+                            <input type="checkbox" name="enable_qr" {{ 'checked' if settings.get('enable_qr','true')=='true'
                                 else '' }}>
                             <span class="toggle-slider"></span>
                         </label>
@@ -83,7 +95,8 @@
                                 Require Serial Number for Electronics
                             </div>
                             <div style="font-size:12px;color:var(--muted)">
-                                Make serial number mandatory for electronic items
+                                Make serial number mandatory when adding or editing an
+                                item with type "Electronic Asset".
                             </div>
                         </div>
                         <label class="toggle">
@@ -103,9 +116,18 @@
                     align-items:center;padding:14px 0;
                     border-bottom:1px solid var(--border)">
                         <div>
-                            <div style="font-size:13.5px;font-weight:500">Email Notifications</div>
+                            <div style="font-size:13.5px;font-weight:500">
+                                Email Notifications
+                                <span style="font-size:10px;font-weight:800;color:var(--amber);
+                                border:1.5px solid var(--amber-bd);border-radius:20px;
+                                padding:1px 7px;margin-left:6px;vertical-align:middle;text-transform:uppercase">
+                                    Not connected
+                                </span>
+                            </div>
                             <div style="font-size:12px;color:var(--muted)">
-                                Send email alerts for important events
+                                Send email alerts for important events. Preference is saved,
+                                but no email server is configured yet — no emails will be sent
+                                until an SMTP connection is set up.
                             </div>
                         </div>
                         <label class="toggle">
@@ -118,9 +140,17 @@
                     <div style="display:flex;justify-content:space-between;
                     align-items:center;padding:14px 0">
                         <div>
-                            <div style="font-size:13.5px;font-weight:500">Stock Opname Reminders</div>
+                            <div style="font-size:13.5px;font-weight:500">
+                                Stock Opname Reminders
+                                <span style="font-size:10px;font-weight:800;color:var(--amber);
+                                border:1.5px solid var(--amber-bd);border-radius:20px;
+                                padding:1px 7px;margin-left:6px;vertical-align:middle;text-transform:uppercase">
+                                    Not connected
+                                </span>
+                            </div>
                             <div style="font-size:12px;color:var(--muted)">
-                                Monthly reminder to perform stock opname
+                                Monthly reminder to perform stock opname. Preference is saved,
+                                but sending is not wired up yet (depends on Email Notifications above).
                             </div>
                         </div>
                         <label class="toggle">
@@ -145,23 +175,23 @@
             <div class="card">
                 <div class="card-header">Data Backup</div>
                 <div class="card-body">
-                    <div style="background:var(--blue-bg);border:1px solid #bfdbfe;
+                    <div style="background:var(--blue-bg);border:1.5px solid var(--blue-bd);
                     border-radius:var(--radius-sm);padding:12px;
                     margin-bottom:16px">
-                        <div style="font-size:12px;font-weight:600;color:var(--blue-text)">
+                        <div style="font-size:12px;font-weight:700;color:var(--blue-text)">
                             <i class="bi bi-database"></i> Last Backup
                         </div>
                         <div style="font-size:12px;color:var(--blue-text);margin-top:2px">
-                            Not yet configured
+                            {{ last_backup_display or 'Not yet backed up' }}
                         </div>
                     </div>
-                    <button type="button" class="btn btn-success" style="width:100%">
-                        <i class="bi bi-cloud-upload"></i> Backup Now
+                    <button type="button" class="btn btn-success" style="width:100%" onclick="submitBackup(this)">
+                        <i class="bi bi-cloud-download"></i> Backup Now
                     </button>
                     <div style="font-size:11px;color:var(--muted);margin-top:12px;line-height:1.8">
-                        • Automatic daily backup: Enabled<br>
-                        • Backup retention: 30 days<br>
-                        • Storage location: Local
+                        • Type: Manual (click button to download)<br>
+                        • Format: Full SQLite database file (.db)<br>
+                        • Storage: Downloaded to your device — keep it somewhere safe
                     </div>
                 </div>
             </div>
@@ -189,4 +219,37 @@
         </div>
     </div>
 </form>
+
+<!-- Backup Now is its own form/action (a real download), kept outside the settings
+     form above so it never accidentally re-submits all other settings. -->
+<form method="POST" action="{{ url_for('settings.backup') }}" style="display:none" id="backupForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function previewLogo(input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const img = document.getElementById('logoPreviewImg');
+        const emoji = document.getElementById('logoPreviewEmoji');
+        img.src = e.target.result;
+        img.style.display = 'block';
+        if (emoji) emoji.style.display = 'none';
+    };
+    reader.readAsDataURL(input.files[0]);
+}
+function submitBackup(btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Preparing backup…';
+    document.getElementById('backupForm').submit();
+    setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-cloud-download"></i> Backup Now';
+    }, 2500);
+}
+</script>
 {% endblock %}

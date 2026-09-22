@@ -80,9 +80,22 @@ def submit_opname():
                 item.status = 'damaged'
             else:
                 item.status = 'available'
+
+    # ── Keep the item's actual location in sync with what was scanned ──
+    # Without this, the "actual location" recorded during opname never
+    # reaches the item's own record — All Items, item detail, and reports
+    # would keep showing the old location forever.
+    location_changed = bool(location_id) and int(location_id) != item.location_id
+    if location_id:
+        item.location_id = int(location_id)
+
     db.session.add(opname)
     db.session.commit()
-    flash(f'Stock opname for "{item.name}" recorded successfully.', 'success')
+
+    if location_changed:
+        flash(f'Stock opname for "{item.name}" recorded, and its location has been updated.', 'success')
+    else:
+        flash(f'Stock opname for "{item.name}" recorded successfully.', 'success')
     return redirect(url_for('opname.scan'))
 
 @opname_bp.route('/opname/results')

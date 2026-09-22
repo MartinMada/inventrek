@@ -13,8 +13,8 @@
 </div>
 
 <!-- Stats -->
-<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
-    <div class="stat-card">
+<div class="stats-grid stats-grid--3" style="margin-bottom:24px">
+    <div class="stat-card stat-card--accent">
         <div>
             <div class="stat-label">Admin Users</div>
             <div class="stat-value">{{ admin_count }}</div>
@@ -43,7 +43,7 @@
     <div style="font-weight:700;color:var(--blue-text);margin-bottom:12px;font-size:13.5px">
         Role Access Levels
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+    <div class="info-grid-3">
         {% for role, icon, desc in [
         ('Admin','🛡️',['Full access to all menus','Manage users and settings','Create and delete data','Export
         reports']),

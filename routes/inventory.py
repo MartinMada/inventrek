@@ -6,8 +6,14 @@ from models import (Item, Category, Brand, Location,
                     Holder, ItemCondition, Unit, Setting)
 from datetime import datetime, date
 import re
+import secrets
 
 inventory_bp = Blueprint('inventory', __name__)
+
+# ── Helper: read a setting value quickly ────────────────────────
+def get_setting(key, default=None):
+    row = Setting.query.filter_by(key=key).first()
+    return row.value if row and row.value not in (None, '') else default
 
 # ── Helper: generate item code ────────────────────────────────
 def generate_item_code():
@@ -74,12 +80,22 @@ def all_items():
         holders    = master['holders'],
         conditions = master['conditions'],
         units      = master['units'],
+        require_serial = get_setting('require_serial', 'false') == 'true',
     )
 
 @inventory_bp.route('/inventory/add', methods=['POST'])
 @login_required
 def add_item():
     data = request.form
+    redirect_to = data.get('redirect_to', 'inventory.all_items')
+
+    item_type      = data.get('item_type', 'general')
+    serial_number  = data.get('serial_number', '').strip() or None
+
+    # ── Enforce "Require Serial Number for Electronics" setting ──
+    if item_type == 'electronic' and get_setting('require_serial', 'false') == 'true' and not serial_number:
+        flash('Serial number is required for Electronics items. Please fill it in before saving.', 'error')
+        return redirect(url_for(redirect_to))
 
     # Generate item code otomatis
     item_code = generate_item_code()
@@ -94,10 +110,13 @@ def add_item():
         except:
             pass
 
+    # ── Only issue a QR token if "Enable QR Code Generation" is on ──
+    qr_token = secrets.token_hex(16) if get_setting('enable_qr', 'true') == 'true' else None
+
     new_item = Item(
         item_code     = item_code,
         name          = data.get('name', '').strip(),
-        item_type     = data.get('item_type', 'general'),
+        item_type     = item_type,
         category_id   = data.get('category_id') or None,
         brand_id      = data.get('brand_id') or None,
         unit_id       = data.get('unit_id') or None,
@@ -109,16 +128,20 @@ def add_item():
         purchase_date = purchase_date,
         status        = data.get('status', 'available'),
         model         = data.get('model', '').strip() or None,
-        serial_number = data.get('serial_number', '').strip() or None,
+        serial_number = serial_number,
         notes         = data.get('notes', '').strip() or None,
+        qr_token      = qr_token,
     )
 
     db.session.add(new_item)
     db.session.commit()
-    flash(f'Item "{new_item.name}" added with code {item_code}.', 'success')
 
-    # Redirect ke halaman yang sesuai
-    redirect_to = data.get('redirect_to', 'inventory.all_items')
+    if qr_token:
+        flash(f'Item "{new_item.name}" added with code {item_code}.', 'success')
+    else:
+        flash(f'Item "{new_item.name}" added with code {item_code}. '
+              f'QR code was not generated (QR generation is disabled in Settings).', 'success')
+
     return redirect(url_for(redirect_to))
 
 @inventory_bp.route('/inventory/<int:id>/edit', methods=['POST'])
@@ -126,6 +149,15 @@ def add_item():
 def edit_item(id):
     item = Item.query.get_or_404(id)
     data = request.form
+    redirect_to = data.get('redirect_to', 'inventory.all_items')
+
+    item_type      = data.get('item_type', 'general')
+    serial_number  = data.get('serial_number', '').strip() or None
+
+    # ── Enforce "Require Serial Number for Electronics" setting ──
+    if item_type == 'electronic' and get_setting('require_serial', 'false') == 'true' and not serial_number:
+        flash('Serial number is required for Electronics items. Please fill it in before saving.', 'error')
+        return redirect(url_for(redirect_to))
 
     purchase_date = None
     if data.get('purchase_date'):
@@ -137,7 +169,7 @@ def edit_item(id):
             pass
 
     item.name          = data.get('name', '').strip()
-    item.item_type     = data.get('item_type', 'general')
+    item.item_type     = item_type
     item.category_id   = data.get('category_id') or None
     item.brand_id      = data.get('brand_id') or None
     item.unit_id       = data.get('unit_id') or None
@@ -149,13 +181,16 @@ def edit_item(id):
     item.purchase_date = purchase_date
     item.status        = data.get('status', 'available')
     item.model         = data.get('model', '').strip() or None
-    item.serial_number = data.get('serial_number', '').strip() or None
+    item.serial_number = serial_number
     item.notes         = data.get('notes', '').strip() or None
+
+    # Backfill a QR token if the setting is now on but this item never got one
+    if not item.qr_token and get_setting('enable_qr', 'true') == 'true':
+        item.qr_token = secrets.token_hex(16)
 
     db.session.commit()
     flash(f'Item "{item.name}" updated.', 'success')
 
-    redirect_to = data.get('redirect_to', 'inventory.all_items')
     return redirect(url_for(redirect_to))
 
 @inventory_bp.route('/inventory/<int:id>/delete', methods=['POST'])

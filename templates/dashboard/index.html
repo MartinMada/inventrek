@@ -3,200 +3,214 @@
 
 {% block content %}
 <div class="page-header">
+  <div>
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle" id="welcomeDate">Welcome back</p>
+  </div>
+  <a href="{{ url_for('opname.scan') }}" class="btn btn-indigo">
+    <i class="bi bi-qr-code-scan"></i> Scan Now
+  </a>
+</div>
+
+<!-- Stats grid row 1 -->
+<div class="stats-grid">
+  <div class="stat-card stat-card--accent">
     <div>
-        <h1 class="page-title">Dashboard</h1>
-        <p class="page-subtitle" id="welcomeDate">Welcome back</p>
+      <div class="stat-label">Total Items</div>
+      <div class="stat-value">{{ total_items }}</div>
     </div>
+    <div class="stat-icon blue"><i class="bi bi-box-seam"></i></div>
+  </div>
+  <div class="stat-card">
+    <div>
+      <div class="stat-label">Electronics</div>
+      <div class="stat-value">{{ electronic_count }}</div>
+    </div>
+    <div class="stat-icon purple"><i class="bi bi-cpu"></i></div>
+  </div>
+  <div class="stat-card">
+    <div>
+      <div class="stat-label">Samples</div>
+      <div class="stat-value">{{ sample_count }}</div>
+    </div>
+    <div class="stat-icon teal"><i class="bi bi-eyedropper"></i></div>
+  </div>
+  <div class="stat-card">
+    <div>
+      <div class="stat-label">Borrowed</div>
+      <div class="stat-value">{{ borrowed_count }}</div>
+    </div>
+    <div class="stat-icon indigo"><i class="bi bi-arrow-left-right"></i></div>
+  </div>
 </div>
 
-<!-- Stats Row 1 -->
+<!-- Stats grid row 2 -->
 <div class="stats-grid">
-    <div class="stat-card">
-        <div>
-            <div class="stat-label">Total Items</div>
-            <div class="stat-value">{{ total_items }}</div>
-        </div>
-        <div class="stat-icon blue">📦</div>
+  <div class="stat-card">
+    <div>
+      <div class="stat-label">Damaged</div>
+      <div class="stat-value">{{ damaged_count }}</div>
     </div>
-    <div class="stat-card">
-        <div>
-            <div class="stat-label">Electronic Assets</div>
-            <div class="stat-value">{{ electronic_count }}</div>
-        </div>
-        <div class="stat-icon purple">💻</div>
+    <div class="stat-icon orange"><i class="bi bi-exclamation-triangle"></i></div>
+  </div>
+  <div class="stat-card">
+    <div>
+      <div class="stat-label">Lost</div>
+      <div class="stat-value">{{ lost_count }}</div>
     </div>
-    <div class="stat-card">
-        <div>
-            <div class="stat-label">Sample Items</div>
-            <div class="stat-value">{{ sample_count }}</div>
-        </div>
-        <div class="stat-icon green">📦</div>
+    <div class="stat-icon red"><i class="bi bi-x-circle"></i></div>
+  </div>
+  <div class="stat-card">
+    <div>
+      <div class="stat-label">Opname Progress</div>
+      <div class="stat-value">{{ opname_pct }}<span style="font-size:1rem;font-weight:600;color:var(--text-3)">%</span></div>
     </div>
-    <div class="stat-card">
-        <div>
-            <div class="stat-label">Items Borrowed</div>
-            <div class="stat-value">{{ borrowed_count }}</div>
-        </div>
-        <div class="stat-icon orange">👤</div>
+    <div class="stat-icon green"><i class="bi bi-clipboard-check"></i></div>
+  </div>
+  <div class="stat-card">
+    <div>
+      <div class="stat-label">Total Value</div>
+      <div class="stat-value" style="font-size:1.15rem">
+        Rp {{ '{:,.0f}'.format(total_value).replace(',','.') }}
+      </div>
     </div>
-</div>
-
-<!-- Stats Row 2 -->
-<div class="stats-grid">
-    <div class="stat-card">
-        <div>
-            <div class="stat-label">Damaged Items</div>
-            <div class="stat-value">{{ damaged_count }}</div>
-        </div>
-        <div class="stat-icon orange">⚠️</div>
-    </div>
-    <div class="stat-card">
-        <div>
-            <div class="stat-label">Lost Items</div>
-            <div class="stat-value">{{ lost_count }}</div>
-        </div>
-        <div class="stat-icon red">❌</div>
-    </div>
-    <div class="stat-card">
-        <div>
-            <div class="stat-label">Stock Opname Progress</div>
-            <div class="stat-value">{{ opname_pct }}%</div>
-        </div>
-        <div class="stat-icon teal">📈</div>
-    </div>
-    <div class="stat-card">
-        <div>
-            <div class="stat-label">Total Inventory Value</div>
-            <div class="stat-value" style="font-size:1.1rem">
-                Rp {{ '{:,.0f}'.format(total_value).replace(',','.') }}
-            </div>
-        </div>
-        <div class="stat-icon indigo">💵</div>
-    </div>
+    <div class="stat-icon indigo"><i class="bi bi-currency-dollar"></i></div>
+  </div>
 </div>
 
 <!-- Charts -->
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px">
-    <div class="card">
-        <div class="card-header">Inventory by Category</div>
-        <div class="card-body">
-            <canvas id="categoryChart" height="220"></canvas>
-        </div>
+<div class="dash-charts">
+  <div class="card">
+    <div class="card-header">
+      Inventory by Category
     </div>
-    <div class="card">
-        <div class="card-header">Monthly Stock Opname</div>
-        <div class="card-body">
-            <canvas id="opnameChart" height="220"></canvas>
-        </div>
+    <div class="card-body" style="display:flex;align-items:center;justify-content:center">
+      <canvas id="categoryChart" height="200"></canvas>
     </div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      Monthly Stock Opname
+    </div>
+    <div class="card-body">
+      <canvas id="opnameChart" height="200"></canvas>
+    </div>
+  </div>
 </div>
 
-<!-- Recent Items -->
-<div class="table-wrap">
-    <div class="card-header">Recently Added Items</div>
-    {% if recent_items %}
-    <table>
-        <thead>
-            <tr>
-                <th>ITEM ID</th>
-                <th>NAME</th>
-                <th>CATEGORY</th>
-                <th>QUANTITY</th>
-                <th>STATUS</th>
-                <th>PURCHASE DATE</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in recent_items %}
-            <tr>
-                <td class="item-id">{{ item.item_code }}</td>
-                <td>{{ item.name }}</td>
-                <td>{{ item.category.name if item.category else '-' }}</td>
-                <td>{{ item.quantity }}</td>
-                <td>
-                    {% if item.status == 'available' %}
-                    <span class="badge badge-available">Available</span>
-                    {% elif item.status == 'in_use' %}
-                    <span class="badge badge-in-use">In Use</span>
-                    {% elif item.status == 'damaged' %}
-                    <span class="badge badge-damaged">Damaged</span>
-                    {% else %}
-                    <span class="badge badge-lost">Lost</span>
-                    {% endif %}
-                </td>
-                <td>{{ item.purchase_date.strftime('%Y-%m-%d') if item.purchase_date else '-' }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <div class="empty-state">
-        <div class="empty-state-icon">📦</div>
-        <p>No items yet. Start by adding inventory items.</p>
-    </div>
-    {% endif %}
+<!-- Recent items -->
+<div class="table-wrap" style="margin-top:0">
+  <div class="card-header" style="border-radius:0">
+    <span>Recently Added Items</span>
+    <a href="{{ url_for('inventory.all_items') }}" class="btn btn-ghost" style="font-size:12px;padding:4px 10px">
+      View all <i class="bi bi-arrow-right"></i>
+    </a>
+  </div>
+  {% if recent_items %}
+  <table>
+    <thead>
+      <tr>
+        <th>Item ID</th>
+        <th>Name</th>
+        <th>Category</th>
+        <th>Qty</th>
+        <th>Status</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in recent_items %}
+      <tr>
+        <td class="item-id">{{ item.item_code }}</td>
+        <td style="font-weight:600;color:var(--text-1)">{{ item.name }}</td>
+        <td>{{ item.category.name if item.category else '—' }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>
+          {% if item.status == 'available' %}<span class="badge badge-available">Available</span>
+          {% elif item.status == 'in_use' %}<span class="badge badge-in-use">In Use</span>
+          {% elif item.status == 'damaged' %}<span class="badge badge-damaged">Damaged</span>
+          {% else %}<span class="badge badge-lost">Lost</span>{% endif %}
+        </td>
+        <td style="color:var(--text-3)">{{ item.purchase_date.strftime('%d %b %Y') if item.purchase_date else '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon"><i class="bi bi-box-seam"></i></div>
+    <p>No items yet. Start by adding inventory items.</p>
+  </div>
+  {% endif %}
 </div>
+
+<style>
+.dash-charts {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 768px) {
+  .dash-charts { grid-template-columns: 1fr; }
+}
+</style>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Welcome date
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const months = ['January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'];
-    const now = new Date();
-    document.getElementById('welcomeDate').textContent =
-        `Welcome back, ${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const now    = new Date();
+document.getElementById('welcomeDate').textContent =
+  `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
 
-    // Category pie chart
-    const catLabels = {{ cat_labels | tojson }};
-    const catValues = {{ cat_values | tojson }};
+// 🎨 CHART COLORS — ubah nilai hex di array ini untuk mengganti warna chart
+// Index 0 = warna kategori pertama di pie chart (kanan dashboard)
+// Bar chart "Monthly Items Added" selalu pakai nilai backgroundColor di bawah sendiri
+const COLORS = ['#f87d50','#151515','#1f7a3d','#1d4ed8','#b8710a','#c81e1e','#ff6a2e','#6b6b6b'];
 
-    new Chart(document.getElementById('categoryChart'), {
-        type: 'pie',
-        data: {
-            labels: catLabels.length ? catLabels : ['No Data'],
-            datasets: [{
-                data: catValues.length ? catValues : [1],
-                backgroundColor: [
-                    '#3b82f6', '#8b5cf6', '#10b981', '#f97316',
-                    '#ef4444', '#14b8a6', '#6366f1', '#f59e0b'
-                ],
-                borderWidth: 2,
-                borderColor: '#fff'
-            }]
-        },
-        options: {
-            plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } },
-            responsive: true
-        }
-    });
+new Chart(document.getElementById('categoryChart'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ cat_labels | tojson }}.length ? {{ cat_labels | tojson }} : ['No Data'],
+    datasets: [{
+      data:            {{ cat_values | tojson }}.length ? {{ cat_values | tojson }} : [1],
+      backgroundColor: COLORS,
+      borderWidth:     3,
+      borderColor:     '#fff',
+      hoverOffset:     6,
+    }]
+  },
+  options: {
+    cutout: '62%',
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 12, family: 'Inter' }, padding: 14 } } },
+    responsive: true,
+  }
+});
 
-    // Monthly opname bar chart
-    new Chart(document.getElementById('opnameChart'), {
-        type: 'bar',
-        data: {
-            labels: {{ months | tojson }},
-        datasets: [{
-            label: 'Items Checked',
-            data: {{ monthly | tojson }},
-        backgroundColor: '#1e3a5f',
-        borderRadius: 4,
-        borderSkipped: false,
-      }]
+new Chart(document.getElementById('opnameChart'), {
+  type: 'bar',
+  data: {
+    labels:   {{ months | tojson }},
+    datasets: [{
+      label:           'Items Checked',
+      data:            {{ monthly | tojson }},
+      backgroundColor: '#f87d50',
+      borderColor:     '#151515',
+      borderWidth:     1.5,
+      borderRadius:    4,
+      borderSkipped:   false,
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#f1f5f9' } },
+      x: { grid: { display: false }, ticks: { font: { size: 11 } } }
     },
-        options: {
-        plugins: { legend: { position: 'bottom' } },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: { stepSize: 1 },
-                grid: { color: '#f0f0f0' }
-            },
-            x: { grid: { display: false } }
-        },
-        responsive: true
-    }
-  });
+    responsive: true,
+  }
+});
 </script>
 {% endblock %}

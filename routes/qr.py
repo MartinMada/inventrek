@@ -1,5 +1,5 @@
 from flask import (Blueprint, render_template, send_file,
-                   abort, request, jsonify)
+                   abort, request, jsonify, flash, redirect, url_for)
 from flask_login import login_required, current_user
 from models import Item
 import qrcode
@@ -32,6 +32,11 @@ def generate_qr_base64(data: str, box_size: int = 8) -> str:
 def qr_image(item_id):
     """Return QR code sebagai PNG file download."""
     item = Item.query.get_or_404(item_id)
+    if not item.qr_token:
+        flash(f'"{item.name}" does not have a QR code yet '
+              f'(QR generation was disabled when it was added).', 'error')
+        return redirect(url_for('qr.item_detail', item_id=item.id))
+
     qr   = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_H,
@@ -57,7 +62,7 @@ def qr_image(item_id):
 def item_detail(item_id):
     """Halaman detail item + QR Code."""
     item   = Item.query.get_or_404(item_id)
-    qr_b64 = generate_qr_base64(item.qr_token, box_size=10)
+    qr_b64 = generate_qr_base64(item.qr_token, box_size=10) if item.qr_token else None
     return render_template('qr/item_detail.html',
         item=item, qr_b64=qr_b64)
 
@@ -80,9 +85,21 @@ def print_qr():
     if not items:
         abort(404)
 
+    # Only items that actually have a QR token can be printed
+    printable   = [i for i in items if i.qr_token]
+    skipped_ct  = len(items) - len(printable)
+
+    if not printable:
+        flash('None of the selected items have a QR code generated. '
+              'Enable "QR Code Generation" in Settings, then re-add or edit the item(s).', 'error')
+        return redirect(request.referrer or url_for('inventory.all_items'))
+
+    if skipped_ct:
+        flash(f'{skipped_ct} selected item(s) skipped — they don\u2019t have a QR code generated.', 'error')
+
     # Generate QR untuk setiap item
     items_with_qr = []
-    for item in items:
+    for item in printable:
         qr_b64 = generate_qr_base64(item.qr_token, box_size=8)
         items_with_qr.append({
             'item'   : item,
@@ -98,10 +115,8 @@ def print_qr():
 @login_required
 def batch_print():
     """Terima list ID dari form → redirect ke print page."""
-    from flask import redirect, url_for
     ids = request.form.getlist('selected_ids')
     if not ids:
-        from flask import flash
         flash('No items selected for printing.', 'error')
         return redirect(request.referrer or url_for('inventory.all_items'))
     return redirect(url_for('qr.print_qr', ids=','.join(ids)))

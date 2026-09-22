@@ -14,7 +14,7 @@
 
 <!-- Summary Stats -->
 <div class="stats-grid" style="margin-bottom:24px">
-    <div class="stat-card">
+    <div class="stat-card stat-card--accent">
         <div>
             <div class="stat-label">Total Items</div>
             <div class="stat-value">{{ total_items }}</div>
@@ -85,7 +85,20 @@
                 <td>{{ item.category.name if item.category else '-' }}</td>
                 <td>{{ item.brand.name if item.brand else '-' }}</td>
                 <td>{{ item.quantity }}</td>
-                <td>{{ item.condition.name if item.condition else '-' }}</td>
+                <td>
+                    {% set cname = item.condition.name if item.condition else none %}
+                    {% if cname == 'Good' %}
+                    <span class="badge badge-good">Good</span>
+                    {% elif cname == 'Lost' %}
+                    <span class="badge badge-lost">Lost</span>
+                    {% elif cname and ('Damage' in cname or cname == 'Repair') %}
+                    <span class="badge badge-damaged">{{ cname }}</span>
+                    {% elif cname %}
+                    <span class="badge badge-inactive">{{ cname }}</span>
+                    {% else %}
+                    <span>-</span>
+                    {% endif %}
+                </td>
                 <td>{{ item.location.name if item.location else '-' }}</td>
                 <td>Rp {{ '{:,.0f}'.format(item.unit_price).replace(',','.') }}</td>
                 <td>Rp {{ '{:,.0f}'.format(item.total_value).replace(',','.') }}</td>

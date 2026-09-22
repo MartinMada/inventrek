@@ -83,7 +83,20 @@
                     <td>{{ item.category.name if item.category else '-' }}</td>
                     <td>{{ item.brand.name if item.brand else '-' }}</td>
                     <td>{{ item.quantity }} {{ item.unit.name if item.unit else 'pcs' }}</td>
-                    <td>{{ item.condition.name if item.condition else '-' }}</td>
+                    <td>
+                        {% set cname = item.condition.name if item.condition else none %}
+                        {% if cname == 'Good' %}
+                        <span class="badge badge-good">Good</span>
+                        {% elif cname == 'Lost' %}
+                        <span class="badge badge-lost">Lost</span>
+                        {% elif cname and ('Damage' in cname or cname == 'Repair') %}
+                        <span class="badge badge-damaged">{{ cname }}</span>
+                        {% elif cname %}
+                        <span class="badge badge-inactive">{{ cname }}</span>
+                        {% else %}
+                        <span>-</span>
+                        {% endif %}
+                    </td>
                     <td>{{ item.location.name if item.location else '-' }}</td>
                     <td>{{ item.holder.name if item.holder else '-' }}</td>
                     <td>
@@ -101,16 +114,19 @@
                         <div class="action-btns">
                             <!-- Detail & QR -->
                             <a href="{{ url_for('qr.item_detail', item_id=item.id) }}"
-                               class="action-btn view" title="View Detail & QR Code">
-                                <i class="bi bi-qr-code"></i>
+                               class="action-btn view"
+                               title="{{ 'View Detail & QR Code' if item.qr_token else 'View Detail (No QR generated)' }}">
+                                <i class="bi bi-qr-code" style="{{ '' if item.qr_token else 'opacity:.35' }}"></i>
                             </a>
                             <!-- Print QR single -->
+                            {% if item.qr_token %}
                             <a href="{{ url_for('qr.print_qr', id=item.id) }}"
                                target="_blank"
                                class="action-btn" title="Print QR Code"
                                style="color:var(--text2)">
                                 <i class="bi bi-printer"></i>
                             </a>
+                            {% endif %}
                             <!-- Delete -->
                             <form method="POST"
                                   action="{{ url_for('inventory.delete_item', id=item.id) }}"
@@ -158,7 +174,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Item Type</label>
-                        <select name="item_type" class="form-control">
+                        <select name="item_type" id="itemTypeSelect" class="form-control" onchange="toggleSerialRequired()">
                             <option value="general">General</option>
                             <option value="electronic">Electronic Asset</option>
                             <option value="sample">Sample Item</option>
@@ -259,8 +275,8 @@
                                placeholder="e.g. XPS 15 9520">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Serial Number</label>
-                        <input type="text" name="serial_number" class="form-control"
+                        <label class="form-label" id="serialLabel">Serial Number</label>
+                        <input type="text" name="serial_number" id="serialInput" class="form-control"
                                placeholder="e.g. DL123456789">
                     </div>
                 </div>
@@ -323,6 +339,17 @@
             return false;
         }
         return true;
+    }
+
+    // ── Require serial number for Electronics (mirrors Settings toggle) ──
+    const REQUIRE_SERIAL = {{ 'true' if require_serial else 'false' }};
+    function toggleSerialRequired() {
+        const type  = document.getElementById('itemTypeSelect').value;
+        const input = document.getElementById('serialInput');
+        const label = document.getElementById('serialLabel');
+        const needsSerial = REQUIRE_SERIAL && type === 'electronic';
+        input.required = needsSerial;
+        label.textContent = needsSerial ? 'Serial Number *' : 'Serial Number';
     }
 </script>
 {% endblock %}

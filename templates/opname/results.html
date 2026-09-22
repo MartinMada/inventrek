@@ -32,19 +32,21 @@
             {% for r in records %}
             <tr>
                 <td class="item-id">{{ r.opname_code }}</td>
-                <td>{{ r.checked_at.strftime('%Y-%m-%d') }}</td>
+                <td class="col-datetime">{{ r.checked_at | wib }}</td>
                 <td class="item-id">{{ r.item.item_code }}</td>
                 <td>{{ r.item.name }}</td>
                 <td>
-                    {% set cname = r.condition.name if r.condition else '-' %}
+                    {% set cname = r.condition.name if r.condition else none %}
                     {% if cname == 'Good' %}
                     <span class="badge badge-good">Good</span>
-                    {% elif 'Damage' in cname %}
-                    <span class="badge badge-damaged">{{ cname }}</span>
                     {% elif cname == 'Lost' %}
                     <span class="badge badge-lost">Lost</span>
+                    {% elif cname and ('Damage' in cname or cname == 'Repair') %}
+                    <span class="badge badge-damaged">{{ cname }}</span>
+                    {% elif cname %}
+                    <span class="badge badge-inactive">{{ cname }}</span>
                     {% else %}
-                    <span>{{ cname }}</span>
+                    <span>-</span>
                     {% endif %}
                 </td>
                 <td>{{ r.location.name if r.location else '-' }}</td>
@@ -68,8 +70,8 @@
 </div>
 
 <!-- Summary -->
-<div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
-    <div class="stat-card">
+<div class="stats-grid stats-grid--3">
+    <div class="stat-card stat-card--accent">
         <div>
             <div class="stat-label">Total Checked</div>
             <div class="stat-value">{{ total_checked }}</div>

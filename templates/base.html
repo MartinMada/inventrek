@@ -1,334 +1,394 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}InvenTrek{% endblock %} — Inventory Management</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    {% block head %}{% endblock %}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}InvenTrek{% endblock %} — INVENTREK</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  {% block head %}{% endblock %}
 </head>
-
 <body>
-    <div class="app-layout">
 
-        <!-- ── Sidebar ── -->
-        <aside class="sidebar">
-            <div class="sidebar-brand">
-                <div class="sidebar-brand-name">InvenTrek</div>
-                <div class="sidebar-brand-sub">Inventory Management</div>
-            </div>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
-            <nav class="sidebar-nav">
+<div class="app-layout">
 
-                <!-- Dashboard — semua role -->
-                <div class="nav-item">
-                    <a href="{{ url_for('dashboard.index') }}"
-                        class="nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
-                        <i class="bi bi-speedometer2"></i> Dashboard
-                    </a>
-                </div>
+  <!-- ══ SIDEBAR ══════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
 
-                <!-- Master Data — ADMIN ONLY -->
-                {% if current_user.role == 'admin' %}
-                <div class="nav-item">
-                    <button class="nav-link" onclick="toggleMenu('master')">
-                        <i class="bi bi-database"></i>
-                        Master Data
-                        <i class="bi bi-chevron-right nav-arrow" id="arrow-master"></i>
-                    </button>
-                    <div class="nav-submenu {% if request.endpoint and 'master' in request.endpoint %}show{% endif %}"
-                        id="menu-master">
-                        <a href="{{ url_for('master.categories') }}"
-                            class="nav-link {% if request.endpoint == 'master.categories' %}active{% endif %}">
-                            Categories
-                        </a>
-                        <a href="{{ url_for('master.brands') }}"
-                            class="nav-link {% if request.endpoint == 'master.brands' %}active{% endif %}">
-                            Brands
-                        </a>
-                        <a href="{{ url_for('master.locations') }}"
-                            class="nav-link {% if request.endpoint == 'master.locations' %}active{% endif %}">
-                            Locations
-                        </a>
-                        <a href="{{ url_for('master.holders') }}"
-                            class="nav-link {% if request.endpoint == 'master.holders' %}active{% endif %}">
-                            Holders / PIC
-                        </a>
-                        <a href="{{ url_for('master.conditions') }}"
-                            class="nav-link {% if request.endpoint == 'master.conditions' %}active{% endif %}">
-                            Item Conditions
-                        </a>
-                        <a href="{{ url_for('master.units') }}"
-                            class="nav-link {% if request.endpoint == 'master.units' %}active{% endif %}">
-                            Units
-                        </a>
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- Inventory — Admin & Staff: full CRUD -->
-                {% if current_user.role in ['admin', 'staff'] %}
-                <div class="nav-item">
-                    <button class="nav-link" onclick="toggleMenu('inventory')">
-                        <i class="bi bi-box-seam"></i>
-                        Inventory
-                        <i class="bi bi-chevron-right nav-arrow" id="arrow-inventory"></i>
-                    </button>
-                    <div class="nav-submenu {% if request.endpoint and 'inventory' in request.endpoint %}show{% endif %}"
-                        id="menu-inventory">
-                        <a href="{{ url_for('inventory.all_items') }}"
-                            class="nav-link {% if request.endpoint == 'inventory.all_items' %}active{% endif %}">
-                            All Items
-                        </a>
-                        <a href="{{ url_for('inventory.electronic') }}"
-                            class="nav-link {% if request.endpoint == 'inventory.electronic' %}active{% endif %}">
-                            Electronic Assets
-                        </a>
-                        <a href="{{ url_for('inventory.samples') }}"
-                            class="nav-link {% if request.endpoint == 'inventory.samples' %}active{% endif %}">
-                            Sample Items
-                        </a>
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- Inventory — PIC: view only -->
-                {% if current_user.role == 'pic' %}
-                <div class="nav-item">
-                    <button class="nav-link" onclick="toggleMenu('inventory')">
-                        <i class="bi bi-box-seam"></i>
-                        My Items
-                        <i class="bi bi-chevron-right nav-arrow" id="arrow-inventory"></i>
-                    </button>
-                    <div class="nav-submenu {% if request.endpoint and 'inventory' in request.endpoint %}show{% endif %}"
-                        id="menu-inventory">
-                        <a href="{{ url_for('inventory.all_items') }}"
-                            class="nav-link {% if request.endpoint == 'inventory.all_items' %}active{% endif %}">
-                            All Items
-                        </a>
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- Stock Opname — semua role -->
-                <div class="nav-item">
-                    <button class="nav-link" onclick="toggleMenu('opname')">
-                        <i class="bi bi-clipboard-check"></i>
-                        Stock Opname
-                        <i class="bi bi-chevron-right nav-arrow" id="arrow-opname"></i>
-                    </button>
-                    <div class="nav-submenu {% if request.endpoint and 'opname' in request.endpoint %}show{% endif %}"
-                        id="menu-opname">
-                        <a href="{{ url_for('opname.scan') }}"
-                            class="nav-link {% if request.endpoint == 'opname.scan' %}active{% endif %}">
-                            Scan QR
-                        </a>
-                        {% if current_user.role in ['admin', 'staff'] %}
-                        <a href="{{ url_for('opname.results') }}"
-                            class="nav-link {% if request.endpoint == 'opname.results' %}active{% endif %}">
-                            Stock Check Result
-                        </a>
-                        <a href="{{ url_for('opname.history') }}"
-                            class="nav-link {% if request.endpoint == 'opname.history' %}active{% endif %}">
-                            History Opname
-                        </a>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Reports — Admin & Staff -->
-                {% if current_user.role in ['admin', 'staff'] %}
-                <div class="nav-item">
-                    <button class="nav-link" onclick="toggleMenu('reports')">
-                        <i class="bi bi-file-text"></i>
-                        Reports
-                        <i class="bi bi-chevron-right nav-arrow" id="arrow-reports"></i>
-                    </button>
-                    <div class="nav-submenu {% if request.endpoint and 'reports' in request.endpoint %}show{% endif %}"
-                        id="menu-reports">
-                        <a href="{{ url_for('reports.inventory') }}"
-                            class="nav-link {% if request.endpoint == 'reports.inventory' %}active{% endif %}">
-                            Inventory Report
-                        </a>
-                        <a href="{{ url_for('reports.borrowing') }}"
-                            class="nav-link {% if request.endpoint == 'reports.borrowing' %}active{% endif %}">
-                            Borrowing Report
-                        </a>
-                        <a href="{{ url_for('reports.damage') }}"
-                            class="nav-link {% if request.endpoint == 'reports.damage' %}active{% endif %}">
-                            Damage / Lost Report
-                        </a>
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- Users — ADMIN ONLY -->
-                {% if current_user.role == 'admin' %}
-                <div class="nav-item">
-                    <a href="{{ url_for('users.index') }}"
-                        class="nav-link {% if request.endpoint and 'users' in request.endpoint %}active{% endif %}">
-                        <i class="bi bi-people"></i> Users
-                    </a>
-                </div>
-                {% endif %}
-
-                <!-- Settings — ADMIN ONLY -->
-                {% if current_user.role == 'admin' %}
-                <div class="nav-item">
-                    <a href="{{ url_for('settings.index') }}"
-                        class="nav-link {% if request.endpoint and 'settings' in request.endpoint %}active{% endif %}">
-                        <i class="bi bi-gear"></i> Settings
-                    </a>
-                </div>
-                {% endif %}
-
-            </nav>
-
-            <!-- User info di bawah sidebar -->
-            <div class="sidebar-user">
-                <div class="sidebar-user-avatar">
-                    {{ current_user.name[0].upper() }}
-                </div>
-                <div class="sidebar-user-info">
-                    <div class="sidebar-user-name">{{ current_user.name }}</div>
-                    <div class="sidebar-user-role">{{ current_user.role | capitalize }}</div>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:4px;margin-left:auto">
-                    <a href="{{ url_for('auth.change_password') }}" title="Change Password" style="color:rgba(255,255,255,0.4);font-size:13px;
-                  text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='rgba(255,255,255,0.8)'"
-                        onmouseout="this.style.color='rgba(255,255,255,0.4)'">
-                        <i class="bi bi-key"></i>
-                    </a>
-                    <a href="{{ url_for('auth.logout') }}" title="Logout" style="color:rgba(255,255,255,0.4);font-size:13px;
-                  text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#fca5a5'"
-                        onmouseout="this.style.color='rgba(255,255,255,0.4)'">
-                        <i class="bi bi-box-arrow-right"></i>
-                    </a>
-                </div>
-            </div>
-        </aside>
-
-        <!-- ── Main Content ── -->
-        <div class="main-content">
-
-            <!-- Topbar -->
-            <header class="topbar">
-                <div class="topbar-search">
-                    <span class="search-close">✕</span>
-                    <input type="text" class="search-input" placeholder="Search inventory...">
-                </div>
-                <div class="topbar-right">
-                    <button class="notif-btn">
-                        <i class="bi bi-bell"></i>
-                        <span class="notif-dot"></span>
-                    </button>
-                    <div style="position:relative">
-                        <button class="user-btn" onclick="toggleUserMenu()">
-                            <div class="user-avatar">{{ current_user.name[0].upper() }}</div>
-                            <span class="user-name">{{ current_user.name }}</span>
-                        </button>
-                        <!-- Dropdown -->
-                        <div id="userMenu" style="display:none;position:absolute;right:0;top:calc(100% + 8px);
-               background:white;border:1px solid var(--border);border-radius:var(--radius);
-               box-shadow:var(--shadow-md);min-width:160px;z-index:100;overflow:hidden">
-                            <a href="{{ url_for('auth.logout') }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;
-                      font-size:13.5px;color:var(--danger);text-decoration:none;
-                      transition:background 0.2s" onmouseover="this.style.background='var(--danger-bg)'"
-                                onmouseout="this.style.background='transparent'">
-                                <i class="bi bi-box-arrow-right"></i> Logout
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
-            <!-- Flash Messages -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-            <div style="padding: 16px 24px 0">
-                {% for category, message in messages %}
-                <div class="alert alert-{{ 'success' if category == 'success' else 'error' }}">
-                    {{ message }}
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-            {% endwith %}
-
-            <!-- Page Content -->
-            <div class="page-content fade-up">
-                {% block content %}{% endblock %}
-            </div>
-
-        </div>
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">
+        <img src="{{ company_logo_url or url_for('static', filename='img/logo.png') }}" alt="CO-TREK">
+      </div>
+      <div class="sidebar-brand-text">
+        <div class="sidebar-brand-name">Inventrek</div>
+        <div class="sidebar-brand-sub">By Co-Trek</div>
+      </div>
     </div>
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <nav class="sidebar-nav">
 
-    <script>
-        // ── Sidebar toggle submenu ──────────────────────────────
-        function toggleMenu(name) {
-            const menu = document.getElementById(`menu-${name}`);
-            const arrow = document.getElementById(`arrow-${name}`);
-            if (!menu) return;
-            menu.classList.toggle('show');
-            arrow?.classList.toggle('open');
-        }
+      <!-- Dashboard -->
+      <a href="{{ url_for('dashboard.index') }}"
+         class="nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+        <i class="bi bi-grid-1x2"></i> Dashboard
+      </a>
 
-        // Auto buka submenu yang aktif
-        document.addEventListener('DOMContentLoaded', () => {
-            ['master', 'inventory', 'opname', 'reports'].forEach(name => {
-                const menu = document.getElementById(`menu-${name}`);
-                if (menu?.classList.contains('show')) {
-                    document.getElementById(`arrow-${name}`)?.classList.add('open');
-                }
-            });
-        });
+      <!-- Master Data — admin only -->
+      {% if current_user.role == 'admin' %}
+      <div class="nav-section-label">Master Data</div>
+      <div class="nav-item">
+        <button class="nav-link" onclick="toggleMenu('master')">
+          <i class="bi bi-database"></i> Master Data
+          <i class="bi bi-chevron-right nav-arrow" id="arrow-master"></i>
+        </button>
+        <div class="nav-submenu {% if request.endpoint and 'master' in request.endpoint %}show{% endif %}" id="menu-master">
+          <a href="{{ url_for('master.categories') }}" class="nav-link {% if request.endpoint=='master.categories' %}active{% endif %}">
+            <i class="bi bi-tag"></i> Categories
+          </a>
+          <a href="{{ url_for('master.brands') }}" class="nav-link {% if request.endpoint=='master.brands' %}active{% endif %}">
+            <i class="bi bi-bookmark"></i> Brands
+          </a>
+          <a href="{{ url_for('master.locations') }}" class="nav-link {% if request.endpoint=='master.locations' %}active{% endif %}">
+            <i class="bi bi-geo-alt"></i> Locations
+          </a>
+          <a href="{{ url_for('master.holders') }}" class="nav-link {% if request.endpoint=='master.holders' %}active{% endif %}">
+            <i class="bi bi-person-vcard"></i> Holders / PIC
+          </a>
+          <a href="{{ url_for('master.conditions') }}" class="nav-link {% if request.endpoint=='master.conditions' %}active{% endif %}">
+            <i class="bi bi-shield-check"></i> Conditions
+          </a>
+          <a href="{{ url_for('master.units') }}" class="nav-link {% if request.endpoint=='master.units' %}active{% endif %}">
+            <i class="bi bi-rulers"></i> Units
+          </a>
+        </div>
+      </div>
+      {% endif %}
 
-        // ── User menu toggle ────────────────────────────────────
-        function toggleUserMenu() {
-            const menu = document.getElementById('userMenu');
-            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-        }
+      <!-- Inventory -->
+      {% if current_user.role in ['admin', 'staff', 'pic'] %}
+      <div class="nav-section-label">Inventory</div>
+      <div class="nav-item">
+        <button class="nav-link" onclick="toggleMenu('inventory')">
+          <i class="bi bi-box-seam"></i>
+          {% if current_user.role == 'pic' %}My Items{% else %}Inventory{% endif %}
+          <i class="bi bi-chevron-right nav-arrow" id="arrow-inventory"></i>
+        </button>
+        <div class="nav-submenu {% if request.endpoint and 'inventory' in request.endpoint %}show{% endif %}" id="menu-inventory">
+          <a href="{{ url_for('inventory.all_items') }}" class="nav-link {% if request.endpoint=='inventory.all_items' %}active{% endif %}">
+            <i class="bi bi-list-ul"></i> All Items
+          </a>
+          {% if current_user.role in ['admin','staff'] %}
+          <a href="{{ url_for('inventory.electronic') }}" class="nav-link {% if request.endpoint=='inventory.electronic' %}active{% endif %}">
+            <i class="bi bi-cpu"></i> Electronics
+          </a>
+          <a href="{{ url_for('inventory.samples') }}" class="nav-link {% if request.endpoint=='inventory.samples' %}active{% endif %}">
+            <i class="bi bi-eyedropper"></i> Samples
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
 
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.user-btn') && !e.target.closest('#userMenu')) {
-                document.getElementById('userMenu').style.display = 'none';
-            }
-        });
+      <!-- Stock Opname -->
+      <div class="nav-section-label">Operations</div>
+      <div class="nav-item">
+        <button class="nav-link" onclick="toggleMenu('opname')">
+          <i class="bi bi-clipboard-check"></i> Stock Opname
+          <i class="bi bi-chevron-right nav-arrow" id="arrow-opname"></i>
+        </button>
+        <div class="nav-submenu {% if request.endpoint and 'opname' in request.endpoint %}show{% endif %}" id="menu-opname">
+          <a href="{{ url_for('opname.scan') }}" class="nav-link {% if request.endpoint=='opname.scan' %}active{% endif %}">
+            <i class="bi bi-qr-code-scan"></i> Scan QR
+          </a>
+          {% if current_user.role in ['admin','staff'] %}
+          <a href="{{ url_for('opname.results') }}" class="nav-link {% if request.endpoint=='opname.results' %}active{% endif %}">
+            <i class="bi bi-check2-circle"></i> Results
+          </a>
+          <a href="{{ url_for('opname.history') }}" class="nav-link {% if request.endpoint=='opname.history' %}active{% endif %}">
+            <i class="bi bi-clock-history"></i> History
+          </a>
+          {% endif %}
+        </div>
+      </div>
 
-        // ── CSRF token ──────────────────────────────────────────
-        function getCsrf() {
-            return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-        }
+      <!-- Reports -->
+      {% if current_user.role in ['admin','staff'] %}
+      <div class="nav-item">
+        <button class="nav-link" onclick="toggleMenu('reports')">
+          <i class="bi bi-bar-chart-line"></i> Reports
+          <i class="bi bi-chevron-right nav-arrow" id="arrow-reports"></i>
+        </button>
+        <div class="nav-submenu {% if request.endpoint and 'reports' in request.endpoint %}show{% endif %}" id="menu-reports">
+          <a href="{{ url_for('reports.inventory') }}" class="nav-link {% if request.endpoint=='reports.inventory' %}active{% endif %}">
+            <i class="bi bi-file-earmark-bar-graph"></i> Inventory
+          </a>
+          <a href="{{ url_for('reports.borrowing') }}" class="nav-link {% if request.endpoint=='reports.borrowing' %}active{% endif %}">
+            <i class="bi bi-arrow-left-right"></i> Borrowing
+          </a>
+          <a href="{{ url_for('reports.damage') }}" class="nav-link {% if request.endpoint=='reports.damage' %}active{% endif %}">
+            <i class="bi bi-exclamation-triangle"></i> Damage / Lost
+          </a>
+        </div>
+      </div>
+      {% endif %}
 
-        // ── Modal helpers ───────────────────────────────────────
-        function openModal(id) {
-            document.getElementById(id)?.classList.add('show');
-            document.body.style.overflow = 'hidden';
-        }
+      <!-- Admin only -->
+      {% if current_user.role == 'admin' %}
+      <div class="nav-section-label">System</div>
+      <a href="{{ url_for('users.index') }}" class="nav-link {% if request.endpoint and 'users' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-people"></i> Users
+      </a>
+      <a href="{{ url_for('settings.index') }}" class="nav-link {% if request.endpoint and 'settings' in request.endpoint %}active{% endif %}">
+        <i class="bi bi-gear"></i> Settings
+      </a>
+      {% endif %}
 
-        function closeModal(id) {
-            document.getElementById(id)?.classList.remove('show');
-            document.body.style.overflow = '';
-        }
+    </nav>
 
-        // Tutup modal klik overlay
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal-overlay')) {
-                e.target.classList.remove('show');
-                document.body.style.overflow = '';
-            }
-        });
-    </script>
+    <!-- Sidebar user -->
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar">{{ current_user.name[0].upper() }}</div>
+      <div>
+        <div class="sidebar-user-name">{{ current_user.name }}</div>
+        <div class="sidebar-user-role">{{ current_user.role | capitalize }}</div>
+      </div>
+      <div class="sidebar-user-actions">
+        <a href="{{ url_for('auth.change_password') }}" title="Change password"><i class="bi bi-key"></i></a>
+        <a href="{{ url_for('auth.logout') }}" title="Logout" class="logout"><i class="bi bi-box-arrow-right"></i></a>
+      </div>
+    </div>
 
-    {% block scripts %}{% endblock %}
+  </aside>
+
+  <!-- ══ MAIN ═════════════════════════════════════════════════ -->
+  <div class="main-content">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="topbar-hamburger" onclick="openSidebar()" aria-label="Menu">
+          <i class="bi bi-list"></i>
+        </button>
+        <button class="sidebar-collapse-btn" onclick="toggleSidebarCollapse()" id="collapseBtn" title="Toggle sidebar" aria-label="Toggle sidebar">
+          <i class="bi bi-layout-sidebar-inset" id="collapseIcon"></i>
+        </button>
+        <div class="topbar-search">
+          <i class="bi bi-search"></i>
+          <input type="text" class="search-input" placeholder="Search inventory…" oninput="globalSearch(this.value)">
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="notif-btn" title="Notifications">
+          <i class="bi bi-bell"></i>
+          <span class="notif-dot"></span>
+        </button>
+        <div style="position:relative">
+          <button class="user-btn" onclick="toggleUserMenu()" id="userBtn">
+            <div class="user-avatar">{{ current_user.name[0].upper() }}</div>
+            <span class="user-name">{{ current_user.name }}</span>
+            <i class="bi bi-chevron-down" style="font-size:10px;color:var(--text-3)"></i>
+          </button>
+          <div id="userMenu" class="user-dropdown" style="display:none">
+            <div class="user-dropdown-header">
+              <div style="font-weight:700;font-size:13px;color:var(--text-1)">{{ current_user.name }}</div>
+              <div style="font-size:11.5px;color:var(--text-3)">{{ current_user.role | capitalize }}</div>
+            </div>
+            <div class="user-dropdown-divider"></div>
+            <a href="{{ url_for('auth.change_password') }}" class="user-dropdown-item">
+              <i class="bi bi-key"></i> Change Password
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="user-dropdown-item user-dropdown-item--danger">
+              <i class="bi bi-box-arrow-right"></i> Sign Out
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div style="padding:16px 24px 0">
+      {% for category, message in messages %}
+      <div class="alert alert-{{ 'success' if category=='success' else 'error' if category=='error' else category }}">
+        <i class="bi bi-{{ 'check-circle' if category=='success' else 'exclamation-circle' if category=='error' else 'info-circle' }}"></i>
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- Page content -->
+    <div class="page-content fade-up">
+      {% block content %}{% endblock %}
+    </div>
+
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+/* User dropdown */
+.user-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  background: var(--white);
+  border: var(--bw) solid var(--border-strong);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+  min-width: 200px;
+  z-index: 100;
+  overflow: hidden;
+  animation: fadeUp .12s ease both;
+}
+
+.user-dropdown-header {
+  padding: 14px 16px 12px;
+}
+
+.user-dropdown-divider {
+  height: var(--bw);
+  background: var(--border-strong);
+  margin: 0;
+}
+
+.user-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--text-2);
+  text-decoration: none;
+  transition: background var(--t);
+}
+
+.user-dropdown-item:hover { background: var(--canvas); color: var(--text-1); }
+
+.user-dropdown-item--danger { color: var(--red); }
+.user-dropdown-item--danger:hover { background: var(--red-bg); color: var(--red); }
+</style>
+
+<script>
+// ── Sidebar collapse (desktop, persisted) ──────────────────────
+function updateCollapseIcon() {
+  const icon = document.getElementById('collapseIcon');
+  if (!icon) return;
+  const collapsed = document.body.classList.contains('sidebar-collapsed');
+  icon.className = collapsed ? 'bi bi-layout-sidebar' : 'bi bi-layout-sidebar-inset';
+}
+
+function toggleSidebarCollapse() {
+  document.body.classList.toggle('sidebar-collapsed');
+  const collapsed = document.body.classList.contains('sidebar-collapsed');
+  localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
+  updateCollapseIcon();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('sidebarCollapsed') === '1') {
+    document.body.classList.add('sidebar-collapsed');
+  }
+  updateCollapseIcon();
+});
+
+// ── Sidebar mobile ───────────────────────────────────────────────
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+// ── Submenu toggle ───────────────────────────────────────────────
+function toggleMenu(name) {
+  const menu  = document.getElementById(`menu-${name}`);
+  const arrow = document.getElementById(`arrow-${name}`);
+  if (!menu) return;
+  menu.classList.toggle('show');
+  arrow?.classList.toggle('open');
+}
+
+// Auto-open active submenu
+document.addEventListener('DOMContentLoaded', () => {
+  ['master','inventory','opname','reports'].forEach(name => {
+    const menu = document.getElementById(`menu-${name}`);
+    if (menu?.classList.contains('show')) {
+      document.getElementById(`arrow-${name}`)?.classList.add('open');
+    }
+  });
+});
+
+// ── User menu ────────────────────────────────────────────────────
+function toggleUserMenu() {
+  const menu = document.getElementById('userMenu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#userBtn') && !e.target.closest('#userMenu')) {
+    const m = document.getElementById('userMenu');
+    if (m) m.style.display = 'none';
+  }
+});
+
+// ── Modal helpers ────────────────────────────────────────────────
+function openModal(id) {
+  document.getElementById(id)?.classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(id) {
+  document.getElementById(id)?.classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('modal-overlay')) {
+    e.target.classList.remove('show');
+    document.body.style.overflow = '';
+  }
+});
+
+// ── Keyboard close ───────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.show').forEach(m => {
+      m.classList.remove('show');
+      document.body.style.overflow = '';
+    });
+    closeSidebar();
+  }
+});
+
+// ── Global search (basic filter on current page tables) ─────────
+function globalSearch(q) {
+  q = q.toLowerCase().trim();
+  document.querySelectorAll('table tbody tr').forEach(row => {
+    row.style.display = (!q || row.textContent.toLowerCase().includes(q)) ? '' : 'none';
+  });
+}
+
+// ── CSRF helper ──────────────────────────────────────────────────
+function getCsrf() {
+  return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+}
+</script>
+
+{% block scripts %}{% endblock %}
 </body>
-
 </html>

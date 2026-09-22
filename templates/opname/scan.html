@@ -26,7 +26,7 @@
                        onkeydown="if(event.key==='Enter'){event.preventDefault();lookupItem()}">
                 <button class="btn btn-primary" onclick="lookupItem()"
                         style="flex-shrink:0;white-space:nowrap">
-                    <i class="bi bi-search"></i> Scan
+                    <i class="bi bi-search"></i> Search
                 </button>
             </div>
 
@@ -91,12 +91,22 @@
                                     border-radius:4px">
                             Scanning...
                         </div>
-                        <button class="btn btn-outline" onclick="stopCamera()"
-                                style="font-size:12px;padding:4px 12px;
-                                       background:rgba(255,255,255,0.92);
-                                       border-color:#e5e7eb">
-                            <i class="bi bi-stop-circle"></i> Stop
-                        </button>
+                        <div style="display:flex;gap:6px;align-items:center">
+                            <!-- Switch camera button (muncul kalau ada > 1 kamera) -->
+                            <button id="btnSwitchCam" class="btn btn-outline"
+                                    onclick="switchCamera()"
+                                    style="display:none;font-size:12px;padding:4px 10px;
+                                           background:rgba(255,255,255,0.92);
+                                           border-color:#e5e7eb">
+                                <i class="bi bi-arrow-repeat"></i>
+                            </button>
+                            <button class="btn btn-outline" onclick="stopCamera()"
+                                    style="font-size:12px;padding:4px 12px;
+                                           background:rgba(255,255,255,0.92);
+                                           border-color:#e5e7eb">
+                                <i class="bi bi-stop-circle"></i> Stop
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -110,17 +120,6 @@
                         font-size:13px;color:#dc2626">
             </div>
 
-            <!-- Browser support warning -->
-            <div id="barcodeWarning"
-                 style="display:none;margin-top:10px;padding:10px 14px;
-                        background:#fffbeb;border:1px solid #fde68a;
-                        border-radius:var(--radius-sm);
-                        font-size:12px;color:#92400e">
-                <i class="bi bi-info-circle"></i>
-                Auto-scan not supported in this browser.
-                Use manual input or try Chrome/Edge.
-            </div>
-
             <!-- Tips -->
             <div style="margin-top:12px;padding:10px 14px;background:var(--bg);
                         border-radius:var(--radius-sm)">
@@ -131,10 +130,37 @@
                 <ul style="font-size:12px;color:var(--muted);
                            margin:0;padding-left:16px;line-height:1.8">
                     <li>Type item code manually and press <strong>Enter</strong></li>
-                    <li>Use Chrome or Edge for camera scan</li>
-                    <li>On mobile, use the back camera for best results</li>
+                    <li>Point the QR code clearly in the center of the frame</li>
+                    <li>On mobile, tap <strong>Switch Camera</strong> to use the back camera</li>
                     <li>Make sure no other app is using the camera</li>
                 </ul>
+            </div>
+
+            <!-- Debug panel (bisa disembunyikan setelah konfirmasi berjalan) -->
+            <div id="debugPanel"
+                 style="margin-top:10px;padding:10px 14px;
+                        background:#f8fafc;border:1px solid #e2e8f0;
+                        border-radius:var(--radius-sm);font-size:11px;
+                        font-family:monospace;color:#475569;display:none">
+                <div style="font-weight:700;margin-bottom:4px;color:#334155">
+                    🔍 Debug Info
+                    <button onclick="document.getElementById('debugPanel').style.display='none'"
+                            style="float:right;background:none;border:none;
+                                   cursor:pointer;font-size:11px;color:#94a3b8">
+                        hide
+                    </button>
+                </div>
+                <div id="dbgResolution">Resolution: -</div>
+                <div id="dbgFrames">Frames scanned: 0</div>
+                <div id="dbgLastRead">Last raw read: -</div>
+                <div id="dbgJsQR">jsQR loaded: checking...</div>
+            </div>
+            <div style="margin-top:6px;text-align:right">
+                <button onclick="document.getElementById('debugPanel').style.display='block'"
+                        style="background:none;border:none;cursor:pointer;
+                               font-size:11px;color:var(--muted);text-decoration:underline">
+                    Show debug info
+                </button>
             </div>
 
         </div>
@@ -320,6 +346,9 @@
 
 
 {% block scripts %}
+<!-- jsQR: local copy, no CDN dependency -->
+<script src="{{ url_for('static', filename='js/jsqr.js') }}"></script>
+
 <style>
 /* ── Layout responsive ───────────────────────────────────── */
 .scan-layout {
@@ -387,29 +416,29 @@
 
 .corner.tl {
     top: 0; left: 0;
-    border-top: 3px solid #3b82f6;
-    border-left: 3px solid #3b82f6;
+    border-top: 3px solid #e8541f;
+    border-left: 3px solid #e8541f;
     border-radius: 2px 0 0 0;
 }
 
 .corner.tr {
     top: 0; right: 0;
-    border-top: 3px solid #3b82f6;
-    border-right: 3px solid #3b82f6;
+    border-top: 3px solid #e8541f;
+    border-right: 3px solid #e8541f;
     border-radius: 0 2px 0 0;
 }
 
 .corner.bl {
     bottom: 0; left: 0;
-    border-bottom: 3px solid #3b82f6;
-    border-left: 3px solid #3b82f6;
+    border-bottom: 3px solid #e8541f;
+    border-left: 3px solid #e8541f;
     border-radius: 0 0 0 2px;
 }
 
 .corner.br {
     bottom: 0; right: 0;
-    border-bottom: 3px solid #3b82f6;
-    border-right: 3px solid #3b82f6;
+    border-bottom: 3px solid #e8541f;
+    border-right: 3px solid #e8541f;
     border-radius: 0 0 2px 0;
 }
 
@@ -418,7 +447,7 @@
     left: 4px; right: 4px;
     height: 2px;
     background: linear-gradient(
-        90deg, transparent, #3b82f6, transparent
+        90deg, transparent, #e8541f, transparent
     );
     animation: scanMove 2s linear infinite;
 }
@@ -427,7 +456,7 @@
 .spinner {
     width: 32px; height: 32px;
     border: 3px solid var(--border);
-    border-top-color: #3b82f6;
+    border-top-color: #e8541f;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
@@ -447,52 +476,78 @@
 <script>
 // ── State ─────────────────────────────────────────────────────
 let videoStream     = null;
-let scanInterval    = null;
+let scanAnimFrame   = null;
 let lastScannedCode = '';
 let isLookingUp     = false;
+let allCameras      = [];      // daftar semua device kamera
+let activeCamIdx    = 0;       // index kamera aktif
 
-// ── Check BarcodeDetector support ────────────────────────────
-if (!('BarcodeDetector' in window)) {
-    document.getElementById('barcodeWarning').style.display = 'block';
+// ── Enumerate cameras (untuk tombol switch) ───────────────────
+async function getCameraList() {
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        allCameras = devices.filter(d => d.kind === 'videoinput');
+        // Tampilkan tombol switch hanya kalau ada > 1 kamera
+        document.getElementById('btnSwitchCam').style.display =
+            allCameras.length > 1 ? 'inline-flex' : 'none';
+    } catch (_) {
+        allCameras = [];
+    }
 }
 
 // ── Camera: Start ─────────────────────────────────────────────
-async function startCamera() {
+async function startCamera(deviceId) {
     showCameraState('loading');
     document.getElementById('cameraError').style.display = 'none';
+    // Reset status bar supaya tidak sisa "✓ Detected!" dari scan sebelumnya
+    const statusEl = document.getElementById('scanStatus');
+    if (statusEl) statusEl.textContent = 'Scanning...';
+
+    // Stop stream lama kalau ada
+    if (videoStream) {
+        videoStream.getTracks().forEach(t => t.stop());
+        videoStream = null;
+    }
+    if (scanAnimFrame) {
+        cancelAnimationFrame(scanAnimFrame);
+        scanAnimFrame = null;
+    }
 
     try {
-        // Coba kamera belakang dulu (untuk HP), fallback ke kamera manapun
+        // Bangun constraints: pakai deviceId kalau ada, kalau tidak
+        // minta environment (kamera belakang) sebagai preferensi
+        const videoConstraints = deviceId
+            ? { deviceId: { exact: deviceId } }
+            : { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } };
+
         let stream;
         try {
-            stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: { ideal: 'environment' },
-                    width:  { ideal: 1280 },
-                    height: { ideal: 720 },
-                }
-            });
+            stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
         } catch {
-            // Fallback: kamera apapun yang tersedia
-            stream = await navigator.mediaDevices.getUserMedia({
-                video: true
-            });
+            // Fallback: kamera manapun
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
         }
 
         videoStream = stream;
         const video = document.getElementById('videoEl');
         video.srcObject = stream;
-        await new Promise(resolve => video.onloadedmetadata = resolve);
+        await new Promise(resolve => { video.onloadedmetadata = resolve; });
         await video.play();
         showCameraState('active');
 
-        // Mulai scan loop
-        if ('BarcodeDetector' in window) {
-            startBarcodeScanning();
-        } else {
-            document.getElementById('scanStatus').textContent =
-                'Point camera at QR code';
+        // Setelah izin diberikan, enumerate ulang agar label kamera tersedia
+        await getCameraList();
+
+        // Tentukan index aktif berdasarkan deviceId yang sedang dipakai
+        if (allCameras.length > 1) {
+            const activeTrack = stream.getVideoTracks()[0];
+            const activeLabel = activeTrack.label;
+            const idx = allCameras.findIndex(d => d.label === activeLabel);
+            if (idx >= 0) activeCamIdx = idx;
         }
+
+        // Mulai jsQR scan loop
+        startJsQRScanning();
 
     } catch (err) {
         showCameraState('idle');
@@ -515,15 +570,24 @@ async function startCamera() {
     }
 }
 
+// ── Switch Camera ─────────────────────────────────────────────
+async function switchCamera() {
+    if (allCameras.length < 2) return;
+    activeCamIdx = (activeCamIdx + 1) % allCameras.length;
+    const nextDeviceId = allCameras[activeCamIdx].deviceId;
+    await startCamera(nextDeviceId);
+}
+
 // ── Camera: Stop ──────────────────────────────────────────────
 function stopCamera() {
-    if (scanInterval)  { clearInterval(scanInterval); scanInterval = null; }
-    if (videoStream)   {
+    if (scanAnimFrame)  { cancelAnimationFrame(scanAnimFrame); scanAnimFrame = null; }
+    if (videoStream)    {
         videoStream.getTracks().forEach(t => t.stop());
         videoStream = null;
     }
     showCameraState('idle');
     document.getElementById('cameraError').style.display = 'none';
+    document.getElementById('btnSwitchCam').style.display = 'none';
     lastScannedCode = '';
 }
 
@@ -537,50 +601,118 @@ function showCameraState(state) {
         state === 'active'  ? 'block' : 'none';
 }
 
-// ── BarcodeDetector scan loop ─────────────────────────────────
-function startBarcodeScanning() {
-    const detector = new BarcodeDetector({ formats: ['qr_code'] });
-    const video    = document.getElementById('videoEl');
-    const canvas   = document.getElementById('canvasEl');
-    const ctx      = canvas.getContext('2d');
+// ── jsQR scan loop (requestAnimationFrame) ────────────────────
+function startJsQRScanning() {
+    const video  = document.getElementById('videoEl');
+    const canvas = document.getElementById('canvasEl');
+    const ctx    = canvas.getContext('2d', { willReadFrequently: true });
 
-    scanInterval = setInterval(async () => {
-        if (!videoStream || video.readyState < 2) return;
-        if (isLookingUp) return;
+    // Cek jsQR loaded
+    const dbgJsQR = document.getElementById('dbgJsQR');
+    if (dbgJsQR) dbgJsQR.textContent = 'jsQR loaded: ' + (typeof jsQR !== 'undefined' ? '✅ YES' : '❌ NO');
 
-        canvas.width  = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
+    // Target resolusi scan: downscale ke max 640px lebar
+    // agar jsQR lebih cepat dan akurat
+    const SCAN_W = 640;
 
-        try {
-            const codes = await detector.detect(canvas);
-            if (codes.length > 0) {
-                const code = codes[0].rawValue;
-                if (code && code !== lastScannedCode) {
-                    lastScannedCode = code;
-                    document.getElementById('qrInput').value = code;
-                    document.getElementById('scanStatus').textContent =
-                        `✓ Detected!`;
+    // Ukuran kotak biru di CSS: 180x180px di atas video yang lebar 100%
+    // Kita crop area tengah video proporsional dengan rasio kotak : video element
+    const FRAME_BOX_PX = 180; // harus sama dengan .scan-frame width/height di CSS
 
-                    // Flash effect
-                    const area = document.getElementById('cameraArea');
-                    area.style.border = '2px solid #22c55e';
-                    setTimeout(() => {
-                        area.style.border = '2px dashed var(--border)';
-                    }, 600);
+    let frameCount = 0;
 
-                    lookupItem(code);
-                    // Cooldown
-                    setTimeout(() => { lastScannedCode = ''; }, 4000);
+    function tick() {
+        if (!videoStream) return;
+
+        if (video.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA && !isLookingUp) {
+            const vw = video.videoWidth;
+            const vh = video.videoHeight;
+
+            if (!vw || !vh) {
+                scanAnimFrame = requestAnimationFrame(tick);
+                return;
+            }
+
+            // Hitung rasio kotak biru terhadap lebar elemen video di layar
+            const videoElW  = video.offsetWidth  || video.clientWidth  || FRAME_BOX_PX * 2;
+            const videoElH  = video.offsetHeight || video.clientHeight || videoElW * (vh / vw);
+            const boxRatioW = FRAME_BOX_PX / videoElW;
+            const boxRatioH = FRAME_BOX_PX / videoElH;
+
+            // Crop koordinat di ruang piksel video asli (tengah video)
+            const cropW  = Math.floor(vw * boxRatioW);
+            const cropH  = Math.floor(vh * boxRatioH);
+            const cropX  = Math.floor((vw - cropW) / 2);
+            const cropY  = Math.floor((vh - cropH) / 2);
+
+            // Downscale crop ke max SCAN_W agar jsQR lebih cepat
+            const scale  = Math.min(1, SCAN_W / cropW);
+            const sw     = Math.max(1, Math.floor(cropW * scale));
+            const sh     = Math.max(1, Math.floor(cropH * scale));
+
+            if (canvas.width !== sw || canvas.height !== sh) {
+                canvas.width  = sw;
+                canvas.height = sh;
+            }
+
+            // Gambar hanya area crop (kotak biru) ke canvas
+            ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, sw, sh);
+            const imageData = ctx.getImageData(0, 0, sw, sh);
+
+            frameCount++;
+
+            // Update debug info tiap 30 frame
+            if (frameCount % 30 === 0) {
+                const dbgR = document.getElementById('dbgResolution');
+                const dbgF = document.getElementById('dbgFrames');
+                if (dbgR) dbgR.textContent = `Video: ${vw}x${vh} | Crop: ${cropX},${cropY} ${cropW}x${cropH} | Scan: ${sw}x${sh}`;
+                if (dbgF) dbgF.textContent = `Frames scanned: ${frameCount}`;
+            }
+
+            // Update status animasi tiap ~60 frame
+            if (frameCount % 60 === 0) {
+                const el = document.getElementById('scanStatus');
+                if (el && (el.textContent.startsWith('Scanning') || el.textContent === 'Scanning')) {
+                    el.textContent = 'Scanning' + '.'.repeat(((frameCount / 60) - 1) % 3 + 1);
                 }
             }
-        } catch { /* ignore */ }
-    }, 400);
+
+            // Jalankan jsQR
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: 'attemptBoth',
+            });
+
+            if (code) {
+                // Ada sesuatu terbaca — update debug meski belum trigger lookup
+                const dbgL = document.getElementById('dbgLastRead');
+                if (dbgL) dbgL.textContent = `Last raw read: "${code.data.substring(0, 60)}"`;
+            }
+
+            if (code && code.data && code.data !== lastScannedCode) {
+                lastScannedCode = code.data;
+                document.getElementById('qrInput').value = code.data;
+                document.getElementById('scanStatus').textContent = '✓ Detected!';
+
+                const area = document.getElementById('cameraArea');
+                area.style.border = '2px solid #22c55e';
+                setTimeout(() => {
+                    area.style.border = '2px dashed var(--border)';
+                }, 600);
+
+                lookupItem(code.data);
+                setTimeout(() => { lastScannedCode = ''; }, 4000);
+            }
+        }
+
+        scanAnimFrame = requestAnimationFrame(tick);
+    }
+
+    scanAnimFrame = requestAnimationFrame(tick);
 }
 
 // ── Lookup item ───────────────────────────────────────────────
 async function lookupItem(code) {
-    const input = (code || document.getElementById('qrInput').value).trim();
+    const input = (typeof code === 'string' ? code : document.getElementById('qrInput').value).trim();
     if (!input || isLookingUp) return;
 
     isLookingUp = true;

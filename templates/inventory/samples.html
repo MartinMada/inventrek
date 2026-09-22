@@ -38,7 +38,20 @@
                 <td>{{ item.name }}</td>
                 <td>{{ item.model or '-' }}</td>
                 <td>{{ item.quantity }} {{ item.unit.name if item.unit else 'pcs' }}</td>
-                <td>{{ item.condition.name if item.condition else '-' }}</td>
+                <td>
+                    {% set cname = item.condition.name if item.condition else none %}
+                    {% if cname == 'Good' %}
+                    <span class="badge badge-good">Good</span>
+                    {% elif cname == 'Lost' %}
+                    <span class="badge badge-lost">Lost</span>
+                    {% elif cname and ('Damage' in cname or cname == 'Repair') %}
+                    <span class="badge badge-damaged">{{ cname }}</span>
+                    {% elif cname %}
+                    <span class="badge badge-inactive">{{ cname }}</span>
+                    {% else %}
+                    <span>-</span>
+                    {% endif %}
+                </td>
                 <td>{{ item.location.name if item.location else '-' }}</td>
                 <td>
                     {% if item.status == 'available' %}
